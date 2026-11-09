@@ -1,0 +1,71 @@
+# 뉴스 갱신 → 사이트 만들기 → Vercel에 올리기 (서버 없이 자동으로)
+#
+# 필요한 설정 (GitHub 저장소 → Settings → Secrets and variables → Actions)
+#   Secrets:  VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID   (필수)
+#             ANTHROPIC_API_KEY                                 (선택: 넣으면 AI 분석·번역)
+#   Variables: WORLDLENS_CONTACT_EMAIL 등                        (선택: 사이트 아래쪽 문의 메일)
+#
+# Vercel 무료 플랜은 하루 올리기 횟수에 제한(약 100번)이 있어서 20분 간격(하루 72번)으로 돌림
+name: 뉴스 갱신 및 배포
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'   # 약 20분마다 (GitHub 사정으로 몇 분 늦을 수 있음)
+    - cron: '0 22 * * *'     # 한국 시간 아침 7시: 오늘의 브리핑 새로 만들기
+  workflow_dispatch:         # Actions 화면에서 'Run workflow'로 바로 실행
+
+concurrency:
+  group: worldlens-update
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      TZ: Asia/Seoul
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # 지난번 실행에서 저장한 데이터베이스(모은 기사·번역·분석)를 이어서 씀
+      - name: 지난 데이터 불러오기
+        uses: actions/cache/restore@v4
+        with:
+          path: data
+          key: worldlens-db-${{ github.run_id }}
+          restore-keys: worldlens-db-
+
+      - name: 뉴스 갱신 + 사이트 만들기
+        run: node --disable-warning=ExperimentalWarning src/refresh-cli.js ${{ github.event.schedule == '0 22 * * *' && '--briefing' || '' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          WORLDLENS_CONTACT_EMAIL: ${{ vars.WORLDLENS_CONTACT_EMAIL }}
+          WORLDLENS_BUSINESS_NAME: ${{ vars.WORLDLENS_BUSINESS_NAME }}
+          WORLDLENS_BUSINESS_OWNER: ${{ vars.WORLDLENS_BUSINESS_OWNER }}
+          WORLDLENS_BUSINESS_REG_NO: ${{ vars.WORLDLENS_BUSINESS_REG_NO }}
+          WORLDLENS_MAIL_ORDER_NO: ${{ vars.WORLDLENS_MAIL_ORDER_NO }}
+          WORLDLENS_BUSINESS_ADDRESS: ${{ vars.WORLDLENS_BUSINESS_ADDRESS }}
+
+      - name: 데이터 저장 (다음 실행에서 이어 씀)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: data
+          key: worldlens-db-${{ github.run_id }}
+
+      - name: Vercel에 올리기
+        run: npx --yes vercel@latest deploy dist --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

@@ -1,3 +1,10 @@
 node_modules/
 data/
+dist/
+dist.tmp/
 .env
+.vercel/
+
+.vercel
+.env*
+!.env.example

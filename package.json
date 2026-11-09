@@ -1,12 +1,13 @@
 {
   "name": "worldlens",
   "version": "0.1.0",
-  "description": "WorldLens — 세상의 조각들을 연결하다. 세계 뉴스를 모아 사건별로 묶고, 나라별 관점을 보여주는 MVP",
+  "description": "WorldLens — 세상의 조각들을 연결하다. 세계 뉴스를 모아 사건별로 묶고, 나라별 관점을 보여주는 사이트 (Vercel 정적 배포)",
   "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env server.js",
-    "refresh": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/refresh-cli.js"
+    "refresh": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/refresh-cli.js",
+    "build": "node --disable-warning=ExperimentalWarning --env-file-if-exists=.env src/build.js"
   },
   "engines": {
     "node": ">=22.13"

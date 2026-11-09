@@ -45,11 +45,18 @@ function setLang(l) {
   renderPage();
 }
 
-const api = async (path, opts) => {
-  const sep = path.includes('?') ? '&' : '?';
-  const r = await fetch(`${path}${sep}lang=${LANG}`, opts);
-  if (!r.ok && r.status !== 202) throw new Error(`${r.status}`);
+// 데이터: 서버 없이 미리 만들어 둔 파일(/data/...)을 읽음
+// (GitHub Actions가 주기적으로 뉴스를 모아 이 파일들을 새로 만들어 Vercel에 올림)
+const getJson = async (path) => {
+  const r = await fetch(path, { cache: 'no-cache' });
+  if (!r.ok) throw new Error(`${r.status}`);
   return r.json();
+};
+const api = {
+  status: () => getJson('/data/status.json'),
+  briefing: () => getJson(`/data/${LANG}/briefing.json`).catch(() => null),
+  events: () => getJson(`/data/${LANG}/events.json`),
+  event: (id) => getJson(`/data/${LANG}/event/${id}.json`),
 };
 
 function ago(iso) {
@@ -65,9 +72,6 @@ const fmtDay = (iso) => new Date(iso).toLocaleDateString(LOCALE(), { month: 'lon
 const fmtTime = (iso) => new Date(iso).toLocaleTimeString(LOCALE(), { hour: '2-digit', minute: '2-digit', hour12: false });
 
 const ICON_LENS = '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><circle cx="14" cy="14" r="9"/><path d="M5 14h18M14 5c3 3 3 15 0 18M14 5c-3 3-3 15 0 18" stroke-width="1.6"/><path d="M21 21l6 6" stroke-linecap="round"/></svg>';
-const ICON_REFRESH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>';
-const ICON_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>';
-const ICON_LOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>';
 
 // ── 헤더·푸터 ──
@@ -88,17 +92,9 @@ function applyChrome() {
         <select id="lang" aria-label="${esc(T.lang_label)}">${window.WL_LANGS.map(([c, n]) => `<option value="${c}" ${c === LANG ? 'selected' : ''}>${n}</option>`).join('')}</select>
       </label>
       <button class="btn font-btn" id="font-size" title="${esc(T.font_label)}" aria-label="${esc(`${T.font_label}: ${T.font_sizes[fontStep]}`)}"><span aria-hidden="true">A<b>A</b></span></button>
-      ${ME?.can_refresh ? `<button class="btn" id="refresh" title="${esc(T.refresh_title)}">${ICON_REFRESH}<span class="label">${esc(T.refresh)}</span></button>` : ''}
-      ${ME?.user ? `<a class="btn ${page === 'account' ? 'on' : ''}" href="/account">${ICON_USER}<span class="label">${esc(T.nav_account)}</span></a>`
-        : `<a class="btn primary" href="/login">${esc(T.nav_login)}</a>`}
     </div>
   </div>`;
   $('#lang').addEventListener('change', (ev) => setLang(ev.target.value));
-  $('#refresh')?.addEventListener('click', async () => {
-    $('#refresh').disabled = true;
-    await api('/api/refresh', { method: 'POST' }).catch(() => {});
-    watchStatus(true);
-  });
   $('#font-size').addEventListener('click', () => {
     fontStep = (fontStep + 1) % FONT_STEPS.length;
     try { localStorage.setItem('wl-font', String(fontStep)); } catch {}
@@ -110,22 +106,20 @@ function applyChrome() {
   if (f) f.innerHTML = footerHtml();
   if (page === 'home') document.title = T.title_home;
   if (page === 'about') document.title = T.title_about;
-  if (page === 'login') document.title = T.title_login;
-  if (page === 'account') document.title = T.title_account;
   if (window.__status) paintStatus(window.__status);
 }
 
 // 아래쪽 정보: 소개·약관·문의 + 사업자 정보 (.env에서 설정)
 function footerHtml() {
-  const s = ME?.site || {};
+  const s = window.__status?.site || {};
   const biz = [[T.b_name, s.business_name], [T.b_owner, s.owner], [T.b_reg, s.reg_no], [T.b_mail, s.mail_order_no], [T.b_addr, s.address]]
     .filter(([, v]) => v).map(([k, v]) => `<span>${esc(k)} ${esc(v)}</span>`).join('');
   return `<div class="wrap foot">
     <nav class="foot-links" aria-label="${esc(T.f_about)}">
-      <a href="/about">${esc(T.f_about)}</a><a href="/terms">${esc(T.f_terms)}</a><a href="/privacy"><b>${esc(T.f_privacy)}</b></a><a href="/refund">${esc(T.f_refund)}</a>
+      <a href="/about">${esc(T.f_about)}</a><a href="/terms">${esc(T.f_terms)}</a><a href="/privacy"><b>${esc(T.f_privacy)}</b></a>
       ${s.contact_email ? `<a href="mailto:${esc(s.contact_email)}">${esc(T.f_contact)}</a>` : ''}
     </nav>
-    <p class="biz">${biz || esc(T.b_pending)}${s.contact_email ? `<span>${esc(T.f_contact)} ${esc(s.contact_email)}</span>` : ''}</p>
+    ${biz || s.contact_email ? `<p class="biz">${biz}${s.contact_email ? `<span>${esc(T.f_contact)} ${esc(s.contact_email)}</span>` : ''}</p>` : ''}
     <p class="copy">${esc(T.footer)}</p>
   </div>`;
 }
@@ -139,15 +133,13 @@ function paintStatus(s, expectRun = false) {
   const label = busy ? T.st_busy
     : s.phase === 'localize' ? T.st_localizing
       : T.st_updated(s.mode === 'ai' ? T.st_ai : T.st_demo, ago(s.last_refresh) || T.st_never);
-  const live = streamOpen ? `<span class="live">${esc(T.live)}</span>` : '';
-  st.innerHTML = `${live}<i class="dot ${s.mode} ${s.running ? 'busy' : ''}"></i><span class="label">${esc(label)}</span>`;
+  st.innerHTML = `<i class="dot ${s.mode} ${s.running ? 'busy' : ''}"></i><span class="label">${esc(label)}</span>`;
   st.title = T.st_title(s.sources_ok ?? '?', s.sources_total, s.articles, s.events);
-  if ($('#refresh')) $('#refresh').disabled = !!s.running;
 }
 async function watchStatus(expectRun = false) {
   clearTimeout(statusTimer);
   let s;
-  try { s = await api('/api/status'); } catch { return; }
+  try { s = await api.status(); } catch { return; }
   window.__status = s;
   paintStatus(s, expectRun);
   // 1단계(수집·분석)가 끝나면 바로, 다른 언어 번역이 끝나면 한 번 더 다시 그림
@@ -170,7 +162,8 @@ const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 
 let currentRegion = '';
 const ORDER = ['asia', 'europe', 'middle-east', 'americas', 'africa', 'oceania', 'global'];
 async function renderHome() {
-  const [briefing, data] = await Promise.all([api('/api/briefing'), api(`/api/events${currentRegion ? `?region=${currentRegion}` : ''}`)]);
+  const [briefing, all] = await Promise.all([api.briefing(), api.events()]);
+  const data = { region_counts: all.region_counts, events: (currentRegion ? all.events.filter((e) => e.region === currentRegion) : all.events).slice(0, 60) };
   const s = window.__status;
   const today = new Date().toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
@@ -277,7 +270,7 @@ async function renderEvent() {
   currentTab ??= TAB_KEYS.includes(params.get('tab')) ? params.get('tab') : 'story';
   const main = $('#event');
   let e;
-  try { e = await api(`/api/events/${id}`); } catch {
+  try { if (!Number.isInteger(id) || id <= 0) throw new Error(); e = await api.event(id); } catch {
     main.innerHTML = `<div class="empty">${esc(T.not_found)} <a href="/">${esc(T.home)}</a></div>`;
     return;
   }
@@ -298,11 +291,11 @@ async function renderEvent() {
     ${e.analysis_lang && e.analysis_lang !== LANG ? `<p class="notice" style="max-width:820px">${esc(T.analysis_pending_lang)}</p>` : ''}
     ${e.analysis_mode === 'demo' ? `<p class="notice" style="max-width:820px">${T.demo_analysis}</p>` : ''}
     ${e.analysis_mode === 'sample' ? `<p class="notice sample" style="max-width:820px">${T.sample_analysis}</p>` : ''}
-    <div class="tabs" role="tablist">${TAB_KEYS.map((k) => `<button role="tab" data-tab="${k}" aria-selected="${k === currentTab}">${e.locked && (k === 'views' || k === 'hypo') ? `<span class="tab-lock">${ICON_LOCK}</span>` : ''}${esc(T.tabs[k])}</button>`).join('')}</div>
+    <div class="tabs" role="tablist">${TAB_KEYS.map((k) => `<button role="tab" data-tab="${k}" aria-selected="${k === currentTab}">${esc(T.tabs[k])}</button>`).join('')}</div>
     <div class="panel" data-panel="story">${storyHtml(a.story)}</div>
     <div class="panel" data-panel="facts">${factsHtml(a.facts)}</div>
-    <div class="panel" data-panel="views">${e.locked ? stanceTeaserHtml(e) + paywallHtml(T.pw_views(e.locked.perspectives)) : viewsHtml(a)}</div>
-    <div class="panel" data-panel="hypo">${e.locked ? paywallHtml(T.pw_hypo(e.locked.hypotheses)) : hypoHtml(a.hypotheses)}</div>
+    <div class="panel" data-panel="views">${viewsHtml(a)}</div>
+    <div class="panel" data-panel="hypo">${hypoHtml(a.hypotheses)}</div>
     <div class="panel" data-panel="timeline">${timelineHtml(e.articles)}</div>`;
 
   const select = (key) => {
@@ -376,147 +369,6 @@ function stanceGroups(list, item) {
       ${g.length ? item(g) : `<p class="muted none">—</p>`}</section>`;
   }).join('')}</div>`;
 }
-// 잠겨 있을 때: 어느 칸에 어느 나라·매체가 있는지만
-function stanceTeaserHtml(e) {
-  if (!e.stances?.length) return '';
-  return `<section class="stance-wrap">${stanceHead(e.analysis || {})}
-    ${stanceGroups(e.stances, (g) => `<div class="stance-pills">${g.map((p) => `<span class="pill ${p.state_media ? 'state' : ''}">${esc(p.country)} · ${esc(p.outlet)}</span>`).join('')}</div>`)}
-    <p class="spec-locked">${ICON_LOCK} ${esc(T.spec_locked)}</p></section>`;
-}
-
-// ── 유료 잠금 안내 ──
-const fmtPrice = () => new Intl.NumberFormat(LOCALE(), { style: 'currency', currency: ME?.billing?.currency || 'KRW', maximumFractionDigits: 0 }).format(ME?.billing?.price || 0);
-const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric' }) : '');
-function paywallHtml(title) {
-  const next = encodeURIComponent(location.pathname + location.search);
-  const cta = ME?.user
-    ? `<a class="btn primary big" href="/account">${esc(T.pw_cta_subscribe(fmtPrice()))}</a>`
-    : `<a class="btn primary big" href="/login?mode=signup&next=${next}">${esc(T.pw_cta_signup(ME?.trial_days ?? 7))}</a>
-       <a class="muted small-link" href="/login?next=${next}">${esc(T.pw_login)}</a>`;
-  return `<div class="paywall"><div class="pw-icon">${ICON_LOCK}</div><h3>${esc(title)}</h3><p>${esc(T.pw_body)}</p>
-    <div class="pw-fake" aria-hidden="true"><i></i><i></i><i></i></div><div class="pw-cta">${cta}</div></div>`;
-}
-
-// ── 로그인·가입 ──
-function renderLogin() {
-  const params = new URLSearchParams(location.search);
-  let mode = params.get('mode') === 'signup' ? 'signup' : 'login';
-  // 로그인 뒤 돌아갈 곳: 이 사이트 안의 주소만 허용 (다른 사이트로 보내는 공격 방지)
-  const nextParam = params.get('next') || '';
-  const next = /^\/[^/\\]/.test(nextParam) || nextParam === '/' ? nextParam : '/';
-  if (ME?.user) { location.replace(next); return; }
-  const draw = (err = '', email = '') => {
-    const signup = mode === 'signup';
-    $('#auth').innerHTML = `<div class="auth-card">
-      <h1>${esc(signup ? T.signup_title : T.login_title)}</h1>
-      <p class="muted">${esc(signup ? T.signup_lead(ME?.trial_days ?? 7) : T.login_lead)}</p>
-      <form id="auth-form" novalidate>
-        <label>${esc(T.email)}<input type="email" name="email" autocomplete="email" required value="${esc(email)}"></label>
-        <label>${esc(T.password)} <span class="muted">· ${esc(T.password_hint)}</span>
-          <input type="password" name="password" minlength="8" autocomplete="${signup ? 'new-password' : 'current-password'}" required></label>
-        ${err ? `<p class="form-error" role="alert">${esc(err)}</p>` : ''}
-        <button class="btn primary big" type="submit">${esc(signup ? T.signup_btn : T.login_btn)}</button>
-      </form>
-      <button class="link-btn" id="switch">${esc(signup ? T.to_login : T.to_signup)}</button>
-    </div>`;
-    $('#switch').onclick = () => { mode = signup ? 'login' : 'signup'; draw(); };
-    $('#auth-form').onsubmit = async (ev) => {
-      ev.preventDefault();
-      const f = new FormData(ev.target);
-      ev.target.querySelector('button[type=submit]').disabled = true;
-      const r = await fetch(`/api/auth/${signup ? 'signup' : 'login'}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: f.get('email'), password: f.get('password'), lang: LANG }),
-      }).catch(() => null);
-      if (r?.ok) { location.href = next; return; }
-      const code = (await r?.json().catch(() => ({})))?.error;
-      const msg = { bad_email: T.err_bad_email, bad_password: T.err_bad_password, email_taken: T.err_email_taken, bad_login: T.err_bad_login, too_many: T.err_too_many }[code] || T.err_generic;
-      draw(msg, f.get('email'));
-    };
-  };
-  draw();
-}
-
-// ── 내 계정·구독 ──
-function renderAccount() {
-  if (!ME?.user) { location.replace('/login?next=/account'); return; }
-  const u = ME.user, b = ME.billing;
-  const params = new URLSearchParams(location.search);
-  const result = params.get('result');
-  let state;
-  if (u.status === 'active' && u.cancel_at_period_end) state = T.st_canceling(fmtDate(u.period_end));
-  else if (u.status === 'active') state = T.st_active(fmtDate(u.period_end));
-  else if (u.trial_active) state = T.st_trial(fmtDate(u.trial_end));
-  else if (u.status === 'past_due') state = T.st_past_due;
-  else state = T.st_expired;
-  const subscribed = u.status === 'active';
-  const cardWaiting = u.trial_active && u.has_card && !u.cancel_at_period_end; // 체험 중 카드 등록 완료 → 체험 끝나면 결제
-  const showSubscribe = !subscribed && !cardWaiting;
-  $('#account').innerHTML = `<div class="auth-card wide">
-    <h1>${esc(T.account_title)}</h1>
-    <p class="muted">${esc(u.email)}</p>
-    ${result === 'ok' ? `<p class="notice sample">${esc(T.result_ok)}</p>` : ''}
-    ${result === 'fail' ? `<p class="form-error" role="alert">${esc(T.result_fail)} ${esc(params.get('message') || '')}</p>` : ''}
-    <section class="plan-box">
-      <div class="eyebrow">${esc(T.plan)}</div>
-      <p class="plan-state ${u.access ? 'ok' : ''}">${esc(state)}</p>
-      ${u.has_card ? `<p class="muted">${esc(T.card)} · ${esc(u.card_label || '')}</p>` : ''}
-      ${cardWaiting && !subscribed ? `<p class="muted">${esc(T.trial_note(fmtDate(u.trial_end)))}</p>` : ''}
-    </section>
-    ${showSubscribe ? `<section class="offer">
-      <div class="price">${esc(T.price_line(fmtPrice()))}</div>
-      <ul>${T.benefits.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-      ${b.provider === 'toss' ? `<button class="btn primary big" id="subscribe">${esc(u.trial_active ? T.subscribe_trial_btn : T.subscribe_btn)}</button>
-        ${u.trial_active ? `<p class="muted small">${esc(T.trial_note(fmtDate(u.trial_end)))}</p>` : ''}` : ''}
-      ${b.provider !== 'toss' && b.dev_billing ? `<button class="btn primary big" id="dev-subscribe">${esc(T.dev_subscribe_btn)}</button>
-        <p class="muted small">${esc(T.dev_note)}</p>` : ''}
-    </section>` : ''}
-    <div class="account-actions">
-      ${(subscribed || cardWaiting) && !u.cancel_at_period_end ? `<button class="btn" id="cancel">${esc(T.cancel_btn)}</button>` : ''}
-      ${u.cancel_at_period_end && u.access ? `<button class="btn" id="resume">${esc(T.resume_btn)}</button>` : ''}
-      <button class="btn" id="logout">${esc(T.logout)}</button>
-    </div>
-  </div>`;
-  const post = (path) => fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-  const reload = async () => { await loadMe(); applyChrome(); renderAccount(); };
-  $('#logout').onclick = async () => { await post('/api/auth/logout'); location.href = '/'; };
-  if ($('#cancel')) $('#cancel').onclick = async () => { if (confirm(T.cancel_confirm)) { await post('/api/billing/cancel'); reload(); } };
-  if ($('#resume')) $('#resume').onclick = async () => { await post('/api/billing/resume'); reload(); };
-  if ($('#dev-subscribe')) $('#dev-subscribe').onclick = async () => { await post('/api/billing/dev-subscribe'); history.replaceState(null, '', '/account?result=ok'); reload(); };
-  if ($('#subscribe')) $('#subscribe').onclick = startTossBilling;
-}
-
-// 토스페이먼츠 카드 등록 창 열기 (SDK v2)
-function loadScript(src) {
-  return new Promise((ok, fail) => {
-    if (document.querySelector(`script[src="${src}"]`)) return ok();
-    const s = document.createElement('script');
-    s.src = src; s.onload = ok; s.onerror = fail;
-    document.head.append(s);
-  });
-}
-async function startTossBilling() {
-  const btn = $('#subscribe');
-  btn.disabled = true;
-  try {
-    const r = await fetch('/api/billing/prepare', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-    if (!r.ok) throw new Error('prepare');
-    const p = await r.json();
-    await loadScript('https://js.tosspayments.com/v2/standard');
-    const payment = window.TossPayments(p.client_key).payment({ customerKey: p.customer_key });
-    await payment.requestBillingAuth({
-      method: 'CARD',
-      successUrl: p.success_url,
-      failUrl: p.fail_url,
-      customerEmail: p.customer_email,
-    });
-  } catch (e) {
-    console.error(e);
-    toast(T.result_fail);
-    btn.disabled = false;
-  }
-}
-
 const notYet = () => `<p class="muted">${esc(T.not_yet)}</p>`;
 function storyHtml(s) {
   if (!s) return notYet();
@@ -563,15 +415,15 @@ function renderAbout() {
 }
 
 // ── 약관·개인정보·환불 ──
-const POLICY_DOCS = ['terms', 'privacy', 'refund'];
+const POLICY_DOCS = ['terms', 'privacy'];
 function renderPolicy() {
   const doc = POLICY_DOCS.includes(document.body.dataset.doc) ? document.body.dataset.doc : 'terms';
   const P = window.WL_POLICY[LANG] || window.WL_POLICY.ko;
   const d = P[doc];
   document.title = `${d.title} — WorldLens`;
-  const email = ME?.site?.contact_email;
+  const email = window.__status?.site?.contact_email;
   const contact = email ? `${esc(T.f_contact)}: <a href="mailto:${esc(email)}">${esc(email)}</a>` : `${esc(T.f_contact)}: ${esc(T.contact_pending)}`;
-  const fill = (s) => esc(s.replaceAll('{price}', fmtPrice()).replaceAll('{trial}', String(ME?.trial_days ?? 7))).replaceAll('{contact}', contact);
+  const fill = (s) => esc(s).replaceAll('{contact}', contact);
   $('#policy').innerHTML = `<article class="policy">
     <nav class="policy-tabs">${POLICY_DOCS.map((k) => `<a href="/${k}" ${k === doc ? 'aria-current="page"' : ''}>${esc(P[k].title)}</a>`).join('')}</nav>
     <h1>${esc(d.title)}</h1>
@@ -580,9 +432,7 @@ function renderPolicy() {
   </article>`;
 }
 
-// ── 실시간 연결 (서버가 새 소식을 바로 알려 줌) ──
-let streamOpen = false;
-let rerenderTimer = null;
+// ── 알림 ──
 function toast(msg) {
   let el = $('#toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.append(el); }
@@ -591,49 +441,19 @@ function toast(msg) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 4000);
 }
-function connectStream() {
-  if (!window.EventSource) return;
-  const es = new EventSource('/api/stream');
-  es.onopen = () => { streamOpen = true; if (window.__status) paintStatus(window.__status); };
-  es.onerror = () => { streamOpen = false; if (window.__status) paintStatus(window.__status); }; // 브라우저가 알아서 다시 연결
-  es.addEventListener('update', (ev) => {
-    let u; try { u = JSON.parse(ev.data); } catch { return; }
-    watchStatus();
-    // 지금 보고 있는 언어에 해당하는 변화일 때만 다시 그림 (여러 신호가 몰리면 한 번만)
-    if (!u.changed || STATIC_PAGES.includes(page)) return;
-    if (u.stage === 'main' || u.lang === LANG) {
-      clearTimeout(rerenderTimer);
-      rerenderTimer = setTimeout(() => {
-        renderPage();
-        if (u.stage === 'main' && u.added > 0) toast(T.toast_new(u.added));
-        else if (u.stage === 'main' && u.analyzed > 0) toast(T.toast_update);
-      }, 400);
-    }
-  });
-}
 
 // ── 시작 ──
-let ME = null;
-async function loadMe() {
-  try { ME = await (await fetch('/api/me')).json(); } catch { ME = null; }
-}
 function renderPage() {
   if (page === 'home') return renderHome();
   if (page === 'event') return renderEvent();
   if (page === 'about') return renderAbout();
-  if (page === 'login') return renderLogin();
-  if (page === 'account') return renderAccount();
   if (page === 'policy') return renderPolicy();
 }
-const STATIC_PAGES = ['about', 'login', 'account', 'policy'];
+const STATIC_PAGES = ['about', 'policy'];
 (async () => {
-  await loadMe();
+  await watchStatus(); // 1분마다 새 데이터가 있는지 확인 → 있으면 화면을 다시 그림
   applyChrome();
-  if (STATIC_PAGES.includes(page)) renderPage();
-  await watchStatus();
-  if (!STATIC_PAGES.includes(page)) renderPage();
-  // ?nolive: 실시간 연결 없이 열기 (화면 캡처·테스트용)
-  if (!new URLSearchParams(location.search).has('nolive')) connectStream();
+  renderPage();
   // 다른 탭에 있다 돌아오거나 컴퓨터가 절전에서 깨어나면: 그동안 놓친 소식을 바로 다시 불러옴
   let hiddenAt = 0;
   document.addEventListener('visibilitychange', () => {
