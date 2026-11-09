@@ -64,7 +64,13 @@ jobs:
           key: worldlens-db-${{ github.run_id }}
 
       - name: Vercel에 올리기
-        run: npx --yes vercel@latest deploy dist --prod --yes --token "$VERCEL_TOKEN"
+        working-directory: dist
+        run: |
+          if [ -z "$VERCEL_TOKEN" ] || [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::error::VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID 중 비어 있는 게 있어요. 저장소 Settings → Secrets and variables → Actions 에서 이름을 확인하세요."
+            exit 1
+          fi
+          npx --yes vercel@latest deploy --prod --yes --token "$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
