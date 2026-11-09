@@ -1,5 +1,6 @@
 {
   "framework": null,
+  "git": { "deploymentEnabled": false },
   "outputDirectory": ".",
   "cleanUrls": true,
   "headers": [
