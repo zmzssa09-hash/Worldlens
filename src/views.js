@@ -103,25 +103,31 @@ export function shownEvents() {
   return listEvents({ sinceIso: sinceHours(48), limit: 500 });
 }
 
-// ── 날짜별 지난 사건 ──
-// 최근 ARCHIVE_DAYS일 동안 3개국 이상이 보도한 사건 (+ 지금 홈에 보이는 사건 전부)
+// ── 과거 뉴스 (날짜별) ──
 // 날짜는 한국 시간 기준. 여러 날 이어진 사건은 기사가 나온 날마다 그날 목록에 들어감
-export const ARCHIVE_DAYS = 14;
+//   최근 FULL_DAYS일: 그날 사건 전부 (상세 페이지 전체)
+//   그 이전 ~ KEEP_DAYS일: 그날 많이 보도된 사건 OLD_CAP개를 한 줄 요약·원문 링크로 가볍게 보관
+//   (Vercel 무료 플랜의 파일 수·용량 한도 안에서 6개월치를 보관하기 위해)
+export const FULL_DAYS = 7;
+export const KEEP_DAYS = 180;
+export const DB_DAYS = 20; // 데이터베이스에 남아 있어 날짜별 목록을 다시 만들 수 있는 기간 (db.pruneOld는 21일)
+export const RECENT_CAP = 80;
+export const OLD_CAP = 20;
+const SLIM_ARTICLES = 4;
 const KST_DAY = "date(published_at, '+9 hours')";
 export const kstDate = (ms = Date.now()) => new Date(ms + 9 * 3600e3).toISOString().slice(0, 10);
 
-export function archiveEvents(shown = shownEvents()) {
-  const old = db.prepare(`SELECT * FROM events WHERE outlet_count >= 2 AND country_count >= 3 AND last_updated >= ?
-    ORDER BY country_count DESC, article_count DESC`).all(sinceHours(ARCHIVE_DAYS * 24));
-  const byId = new Map(old.map((e) => [e.id, e]));
+// 날짜별 목록 후보: 데이터베이스에 남아 있는 여러 매체 사건 (+ 지금 홈에 보이는 사건)
+export function poolEvents(shown = shownEvents()) {
+  const rows = db.prepare('SELECT * FROM events WHERE outlet_count >= 2 AND last_updated >= ?').all(sinceHours(DB_DAYS * 24));
+  const byId = new Map(rows.map((e) => [e.id, e]));
   for (const e of shown) byId.set(e.id, e);
   return [...byId.values()];
 }
 
-// { 'YYYY-MM-DD': [{ event, day_countries, day_articles }] }
-export function archiveDays(events) {
+// { 'YYYY-MM-DD': [{ event, day_countries, day_articles }] } (그날 보도한 나라가 많은 순)
+export function archiveDays(events, firstDate) {
   const ids = events.map((e) => e.id);
-  const first = kstDate(Date.now() - (ARCHIVE_DAYS - 1) * 86400e3);
   const byId = new Map(events.map((e) => [e.id, e]));
   const days = {};
   // SQLite에 한 번에 넘길 수 있는 값 개수에 한계가 있어 500개씩 나눠서 물어봄
@@ -131,7 +137,7 @@ export function archiveDays(events) {
         (SELECT min(${KST_DAY}) FROM articles b WHERE b.event_id = a.event_id) AS first_day
       FROM articles a WHERE event_id IN (${part.map(() => '?').join(',')}) GROUP BY event_id, d`).all(...part);
     for (const r of rows) {
-      if (r.d < first) continue;
+      if (r.d < firstDate) continue;
       // 그날 2개국 이상이 보도했거나, 사건이 처음 나온 날일 때만 그날 목록에 넣음 (기사 한두 건 붙은 날은 빼기)
       if (r.c < 2 && r.d !== r.first_day) continue;
       (days[r.d] ||= []).push({ event: byId.get(r.event_id), day_countries: r.c, day_articles: r.n });
@@ -141,6 +147,21 @@ export function archiveDays(events) {
     list.sort((x, y) => y.day_countries - x.day_countries || y.event.country_count - x.event.country_count || y.day_articles - x.day_articles);
   }
   return days;
+}
+
+// 오래 보관할 사건의 원문 링크 몇 개: 그날 기사 중 나라가 겹치지 않게
+export function slimArticles(eventId, lang, date) {
+  const all = articlesForEvent(eventId, lang);
+  const dayOf = (x) => kstDate(Date.parse(x.published_at));
+  const ordered = [...all.filter((x) => dayOf(x) === date), ...all.filter((x) => dayOf(x) !== date)];
+  const picked = [], seen = new Set();
+  for (const x of ordered) {
+    if (seen.has(x.country)) continue;
+    seen.add(x.country);
+    picked.push({ outlet: outletName(x.source_id, lang), country: countryName(x.country, lang), title: x.t_title || x.title, url: x.url, published_at: x.published_at });
+    if (picked.length >= SLIM_ARTICLES) break;
+  }
+  return picked;
 }
 
 export function eventsData(lang, events = shownEvents()) {

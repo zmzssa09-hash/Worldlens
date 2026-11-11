@@ -76,6 +76,7 @@ const ICON_GLOBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 
 // ── 헤더·푸터 ──
 const page = document.body.dataset.page;
+const FROM_ARCHIVE = page === 'event' && new URLSearchParams(location.search).has('d');
 function applyChrome() {
   document.documentElement.lang = LANG === 'zh' ? 'zh-Hans' : LANG;
   const el = $('#site-header');
@@ -83,8 +84,8 @@ function applyChrome() {
   el.innerHTML = `<div class="wrap">
     <a class="logo" href="/">${ICON_LENS}<span>WorldLens</span></a>
     <nav class="nav">
-      <a href="/" ${page === 'home' || page === 'event' ? 'aria-current="page"' : ''}>${esc(T.nav_today)}</a>
-      <a href="/archive" ${page === 'archive' ? 'aria-current="page"' : ''}>${esc(T.nav_archive)}</a>
+      <a href="/" ${page === 'home' || (page === 'event' && !FROM_ARCHIVE) ? 'aria-current="page"' : ''}>${esc(T.nav_today)}</a>
+      <a href="/archive" ${page === 'archive' || (page === 'event' && FROM_ARCHIVE) ? 'aria-current="page"' : ''}>${esc(T.nav_archive)}</a>
       <a href="/about" ${page === 'about' ? 'aria-current="page"' : ''}>${esc(T.nav_about)}</a>
     </nav>
     <div class="header-right">
@@ -161,10 +162,10 @@ const heat = (n) => { const l = heatLevel(n); return `<span class="heat h${l}" t
 const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 필요 없음
 
 // 사건 카드 (홈·지난 사건 공용). dayMeta가 있으면 '그날' 보도 수를 보여 줌
-function cardHtml(e, { fav = false, dayMeta = false } = {}) {
+function cardHtml(e, { fav = false, dayMeta = false, date = '' } = {}) {
   const meta = dayMeta && e.day_countries ? T.ar_day_meta(e.day_countries, e.day_articles) : T.card_meta(e.country_count, e.article_count);
   return `
-    <a class="card ${fav ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}`)}">
+    <a class="card ${fav ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}${date ? `&d=${date}` : ''}`)}">
       <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e.country_count)}</div>
       <h3>${esc(e.title)}</h3>
       ${e.one_line && e.one_line !== e.title ? `<p>${esc(e.one_line)}</p>` : ''}
@@ -338,6 +339,8 @@ async function renderEvent() {
   const main = $('#event');
   let e;
   try { if (!Number.isInteger(id) || id <= 0) throw new Error(); e = await api.event(id); } catch {
+    const d = params.get('d');
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && await renderKeptEvent(id, d)) return;
     main.innerHTML = `<div class="empty">${esc(T.not_found)} <a href="/">${esc(T.home)}</a></div>`;
     return;
   }
@@ -510,11 +513,39 @@ function toast(msg) {
 }
 
 // ── 시작 ──
-// ── 지난 사건 (날짜별) ──
+// ── 과거 뉴스 (달력) ──
 let arDate = new URLSearchParams(location.search).get('date') || '';
+let arMonth = ''; // 'YYYY-MM' 달력에 보이는 달
 let arCat = '';
 // 'YYYY-MM-DD'(한국 날짜)를 화면 언어로: 11월 9일 (일)
 const fmtDate = (d) => new Date(`${d}T12:00:00+09:00`).toLocaleDateString(LOCALE(), { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' });
+const addMonth = (ym, n) => { const [y, m] = ym.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); return t.toISOString().slice(0, 7); };
+
+function calendarHtml(idx) {
+  const [y, m] = arMonth.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const daysIn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const lead = first.getUTCDay(); // 일요일 시작
+  const wk = Array.from({ length: 7 }, (_, i) => new Date(Date.UTC(2026, 10, 1 + i)).toLocaleDateString(LOCALE(), { weekday: 'narrow', timeZone: 'UTC' })); // 2026-11-01은 일요일
+  const minMonth = idx.first.slice(0, 7), maxMonth = idx.today.slice(0, 7);
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<span class="cd blank"></span>';
+  for (let d = 1; d <= daysIn; d++) {
+    const date = `${arMonth}-${String(d).padStart(2, '0')}`;
+    const n = idx.counts[date] || 0;
+    const cls = ['cd', date === idx.today ? 'today' : '', n >= 40 ? 'lv3' : n >= 15 ? 'lv2' : n ? 'lv1' : ''].join(' ');
+    cells += n
+      ? `<button type="button" class="${cls}" data-d="${date}" aria-pressed="${date === arDate}" aria-label="${esc(fmtDate(date))} · ${esc(T.ar_count(n))}"><b>${d}</b><i>${n}</i></button>`
+      : `<span class="${cls} off"><b>${d}</b></span>`;
+  }
+  return `<div class="cal-head">
+      <button type="button" class="cal-nav" data-m="-1" aria-label="${esc(T.ar_prev)}" ${arMonth <= minMonth ? 'disabled' : ''}>‹</button>
+      <h2>${esc(T.ar_month(y, m))}</h2>
+      <button type="button" class="cal-nav" data-m="1" aria-label="${esc(T.ar_next)}" ${arMonth >= maxMonth ? 'disabled' : ''}>›</button>
+    </div>
+    <div class="cal-grid" role="group">${wk.map((w) => `<span class="wd">${esc(w)}</span>`).join('')}${cells}</div>`;
+}
+
 async function renderArchive() {
   $('#ar-heading').textContent = T.ar_heading;
   $('#ar-intro').textContent = T.ar_intro;
@@ -525,24 +556,28 @@ async function renderArchive() {
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(T.ar_empty)}</div>`;
     return;
   }
-  const days = idx.days || [];
-  if (!days.some((d) => d.date === arDate)) arDate = (days.find((d) => d.count) || days[0])?.date || '';
-  const nav = $('#days');
-  nav.setAttribute('aria-label', T.ar_days_label);
-  nav.innerHTML = days.map((d, i) => `<button type="button" class="day" data-d="${d.date}" aria-pressed="${d.date === arDate}" ${d.count ? '' : 'disabled'}>
-      <span class="dn">${esc(i === 0 ? T.ar_today : i === 1 ? T.ar_yesterday : fmtDate(d.date))}</span>
-      <span class="dc">${d.count ? esc(T.ar_count(d.count)) : '—'}</span>
-    </button>`).join('');
-  nav.querySelectorAll('.day').forEach((b) => b.addEventListener('click', () => {
+  idx.counts ||= {};
+  const dates = Object.keys(idx.counts).sort();
+  if (!idx.counts[arDate]) arDate = dates.at(-1) || idx.today;
+  if (!arMonth) arMonth = arDate.slice(0, 7);
+
+  const cal = $('#cal');
+  cal.setAttribute('aria-label', T.ar_days_label);
+  cal.innerHTML = calendarHtml(idx);
+  cal.querySelectorAll('.cal-nav').forEach((b) => b.addEventListener('click', () => { arMonth = addMonth(arMonth, Number(b.dataset.m)); renderArchive(); }));
+  cal.querySelectorAll('button.cd').forEach((b) => b.addEventListener('click', () => {
     arDate = b.dataset.d; arCat = '';
     const u = new URL(location.href); u.searchParams.set('date', arDate); history.replaceState(null, '', u);
     renderArchive();
+    $('#ar-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }));
-  nav.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 
-  $('#ar-title').textContent = arDate ? T.ar_title(fmtDate(arDate)) : '';
+  $('#ar-title').textContent = T.ar_title(fmtDate(arDate));
   let day;
   try { day = await getJson(`/data/${LANG}/day/${arDate}.json`); } catch { day = { events: [] }; }
+  const slim = $('#ar-slim');
+  slim.hidden = day.full !== false;
+  slim.textContent = T.ar_slim_note;
   const list = day.events || [];
   const catCounts = {};
   for (const e of list) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
@@ -553,8 +588,33 @@ async function renderArchive() {
     ${CAT_ORDER.filter((c) => catCounts[c]).map((c) => `<button class="chip cat" data-c="${c}" aria-pressed="${arCat === c}">${esc(T.cats[c])} <span class="c">${catCounts[c]}</span></button>`).join('')}` : '';
   cats.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => { arCat = c.dataset.c; renderArchive(); }));
   const shown = arCat ? list.filter((e) => e.category === arCat) : list;
-  grid.innerHTML = shown.length ? shown.map((e) => cardHtml(e, { dayMeta: true })).join('')
+  grid.innerHTML = shown.length ? shown.map((e) => cardHtml(e, { dayMeta: true, date: arDate })).join('')
     : `<div class="empty" style="grid-column:1/-1">${esc(T.ar_empty)}</div>`;
+}
+
+// 보관된 사건 (상세 파일이 없는 오래된 사건): 날짜별 목록에 함께 담긴 한 줄 요약·원문 링크로 보여 줌
+async function renderKeptEvent(id, date) {
+  const main = $('#event');
+  let e;
+  try { e = (await getJson(`/data/${LANG}/day/${date}.json`)).events.find((x) => x.id === id); } catch {}
+  if (!e) return false;
+  document.title = `${e.title} — WorldLens`;
+  main.innerHTML = `
+    <div class="event-head">
+      <a class="back" href="/archive?date=${esc(date)}">${esc(T.ar_back)}</a><br>
+      <span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? ` <span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''} <span class="cat-tag">${esc(T.ar_kept)}</span>
+      <h1>${esc(e.title)}</h1>
+      <div class="stats">${heat(e.country_count)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${e.outlet_count}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span><span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
+      <div class="countries">${pills(e.countries, 20)}</div>
+    </div>
+    ${e.one_line ? `<section class="glance kept"><h2 class="eyebrow">${esc(T.glance_title)}</h2><p>${esc(e.one_line)}</p></section>` : ''}
+    <p class="notice" style="max-width:820px">${esc(T.ar_kept_note)}</p>
+    <section class="kept-sources"><h2>${esc(T.ar_sources)}</h2>
+      <ul class="timeline">${(e.articles || []).map((x) => `<li class="tl-item"><time datetime="${esc(x.published_at)}">${esc(fmtDay(x.published_at))}</time><div>
+        <div class="who"><span class="pill">${esc(x.country)}</span>${esc(x.outlet)}</div>
+        <a class="t" href="${esc(safeUrl(x.url))}" target="_blank" rel="noopener noreferrer">${esc(x.title)} ↗</a></div></li>`).join('')}</ul>
+    </section>`;
+  return true;
 }
 
 function renderPage() {
