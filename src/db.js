@@ -197,3 +197,23 @@ db.exec(`
     created_at TEXT NOT NULL
   );
 `);
+
+// 오래된 데이터 정리: 마지막 기사가 keepDays일보다 오래된 사건과 그 기사·번역·분석을 지움
+// (지난 사건은 2주까지만 보여 주므로 3주 넘은 것은 필요 없음. 데이터베이스가 끝없이 커지지 않게)
+export function pruneOld(keepDays = 21) {
+  const cutoff = new Date(Date.now() - keepDays * 86400e3).toISOString();
+  db.exec('BEGIN');
+  try {
+    const oldEvents = `SELECT id FROM events WHERE last_updated < '${cutoff}'`;
+    const oldArticles = `SELECT id FROM articles WHERE published_at < '${cutoff}' AND (event_id IS NULL OR event_id IN (${oldEvents}))`;
+    db.exec(`DELETE FROM article_i18n WHERE article_id IN (${oldArticles})`);
+    const a = db.prepare(`DELETE FROM articles WHERE id IN (${oldArticles})`).run().changes;
+    db.exec(`DELETE FROM event_analysis WHERE event_id IN (${oldEvents})`);
+    const e = db.prepare(`DELETE FROM events WHERE id IN (${oldEvents}) AND id NOT IN (SELECT DISTINCT event_id FROM articles WHERE event_id IS NOT NULL)`).run().changes;
+    db.exec('COMMIT');
+    return { articles: a, events: e };
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+}

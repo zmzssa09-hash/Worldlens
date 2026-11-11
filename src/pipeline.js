@@ -9,7 +9,7 @@ import {
   analyzePending, buildBriefing, hasBriefingToday, localizeAnalyses, localizeBriefing, OTHER_LANGS, modeInfo,
 } from './analyzer/index.js';
 import { BASE_LANG } from './sources.js';
-import { setMeta } from './db.js';
+import { setMeta, pruneOld } from './db.js';
 
 export const updates = new EventEmitter();
 updates.setMaxListeners(1000); // 접속자마다 하나씩 붙음
@@ -55,6 +55,8 @@ export function refresh({ analyze = true, briefing = 'if-missing' } = {}) {
       updates.emit('update', { stage: 'lang', lang, changed: changed || t.translated > 0 || l.done > 0 || b, added: collect.added });
     }
     setMeta('last_localize', new Date().toISOString());
+    const pruned = pruneOld(); // 3주 넘은 데이터 정리
+    if (pruned.articles) console.log(`[정리] 3주 넘은 기사 ${pruned.articles}건, 사건 ${pruned.events}개 지움`);
 
     const report = { collect, translated, cluster, analysis, localized, seconds: Math.round((Date.now() - started) / 1000) };
     // 5분마다 돌기 때문에, 바뀐 게 있을 때만 기록

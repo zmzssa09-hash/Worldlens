@@ -1,5 +1,5 @@
 // 화면에 보낼 데이터 모양 만들기 — 정적 파일 만들기(build.js)에서 사용
-import { listEvents, getEvent, articlesForEvent, getAnalysis, getBriefing, getMeta, counts } from './db.js';
+import { db, listEvents, getEvent, articlesForEvent, getAnalysis, getBriefing, getMeta, counts } from './db.js';
 import { modeInfo, todayKey, localTitle } from './analyzer/index.js';
 import { SOURCES, SOURCE_BY_ID, LANGS, BASE_LANG, countryName, outletName } from './sources.js';
 import { guessCategory } from './category.js';
@@ -101,6 +101,46 @@ export function briefingData(lang) {
 // 최근 48시간 사건 전부 (지역 거르기는 화면에서)
 export function shownEvents() {
   return listEvents({ sinceIso: sinceHours(48), limit: 500 });
+}
+
+// ── 날짜별 지난 사건 ──
+// 최근 ARCHIVE_DAYS일 동안 3개국 이상이 보도한 사건 (+ 지금 홈에 보이는 사건 전부)
+// 날짜는 한국 시간 기준. 여러 날 이어진 사건은 기사가 나온 날마다 그날 목록에 들어감
+export const ARCHIVE_DAYS = 14;
+const KST_DAY = "date(published_at, '+9 hours')";
+export const kstDate = (ms = Date.now()) => new Date(ms + 9 * 3600e3).toISOString().slice(0, 10);
+
+export function archiveEvents(shown = shownEvents()) {
+  const old = db.prepare(`SELECT * FROM events WHERE outlet_count >= 2 AND country_count >= 3 AND last_updated >= ?
+    ORDER BY country_count DESC, article_count DESC`).all(sinceHours(ARCHIVE_DAYS * 24));
+  const byId = new Map(old.map((e) => [e.id, e]));
+  for (const e of shown) byId.set(e.id, e);
+  return [...byId.values()];
+}
+
+// { 'YYYY-MM-DD': [{ event, day_countries, day_articles }] }
+export function archiveDays(events) {
+  const ids = events.map((e) => e.id);
+  const first = kstDate(Date.now() - (ARCHIVE_DAYS - 1) * 86400e3);
+  const byId = new Map(events.map((e) => [e.id, e]));
+  const days = {};
+  // SQLite에 한 번에 넘길 수 있는 값 개수에 한계가 있어 500개씩 나눠서 물어봄
+  for (let i = 0; i < ids.length; i += 500) {
+    const part = ids.slice(i, i + 500);
+    const rows = db.prepare(`SELECT event_id, ${KST_DAY} AS d, count(*) AS n, count(DISTINCT country) AS c,
+        (SELECT min(${KST_DAY}) FROM articles b WHERE b.event_id = a.event_id) AS first_day
+      FROM articles a WHERE event_id IN (${part.map(() => '?').join(',')}) GROUP BY event_id, d`).all(...part);
+    for (const r of rows) {
+      if (r.d < first) continue;
+      // 그날 2개국 이상이 보도했거나, 사건이 처음 나온 날일 때만 그날 목록에 넣음 (기사 한두 건 붙은 날은 빼기)
+      if (r.c < 2 && r.d !== r.first_day) continue;
+      (days[r.d] ||= []).push({ event: byId.get(r.event_id), day_countries: r.c, day_articles: r.n });
+    }
+  }
+  for (const list of Object.values(days)) {
+    list.sort((x, y) => y.day_countries - x.day_countries || y.event.country_count - x.event.country_count || y.day_articles - x.day_articles);
+  }
+  return days;
 }
 
 export function eventsData(lang, events = shownEvents()) {

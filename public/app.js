@@ -84,6 +84,7 @@ function applyChrome() {
     <a class="logo" href="/">${ICON_LENS}<span>WorldLens</span></a>
     <nav class="nav">
       <a href="/" ${page === 'home' || page === 'event' ? 'aria-current="page"' : ''}>${esc(T.nav_today)}</a>
+      <a href="/archive" ${page === 'archive' ? 'aria-current="page"' : ''}>${esc(T.nav_archive)}</a>
       <a href="/about" ${page === 'about' ? 'aria-current="page"' : ''}>${esc(T.nav_about)}</a>
     </nav>
     <div class="header-right">
@@ -106,6 +107,7 @@ function applyChrome() {
   if (f) f.innerHTML = footerHtml();
   if (page === 'home') document.title = T.title_home;
   if (page === 'about') document.title = T.title_about;
+  if (page === 'archive') document.title = T.title_archive;
   if (window.__status) paintStatus(window.__status);
 }
 
@@ -157,6 +159,19 @@ const pills = (countries, max = 6) => {
 const heatLevel = (n) => (n >= 6 ? 3 : n >= 4 ? 2 : 1);
 const heat = (n) => { const l = heatLevel(n); return `<span class="heat h${l}" title="${esc(T.coverage_title(n))}"><span aria-hidden="true">${'🔥'.repeat(l)}</span> ${esc(T.heat[l - 1])}</span>`; };
 const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 필요 없음
+
+// 사건 카드 (홈·지난 사건 공용). dayMeta가 있으면 '그날' 보도 수를 보여 줌
+function cardHtml(e, { fav = false, dayMeta = false } = {}) {
+  const meta = dayMeta && e.day_countries ? T.ar_day_meta(e.day_countries, e.day_articles) : T.card_meta(e.country_count, e.article_count);
+  return `
+    <a class="card ${fav ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}`)}">
+      <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e.country_count)}</div>
+      <h3>${esc(e.title)}</h3>
+      ${e.one_line && e.one_line !== e.title ? `<p>${esc(e.one_line)}</p>` : ''}
+      <div class="countries">${pills(e.countries)}</div>
+      <div class="meta"><span>${esc(meta)}</span>${e.read_min ? `<span class="read" title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(dayMeta ? T.first_seen(fmtDay(e.first_seen)) : ago(e.last_updated))}</span></div>
+    </a>`;
+}
 
 // ── 홈 ──
 let currentRegion = '';
@@ -278,14 +293,8 @@ async function renderHome(useCache = false) {
       : `<div class="empty" style="grid-column:1/-1">${esc(T.empty_none)}</div>`;
     return;
   }
-  grid.innerHTML = data.events.map((e) => `
-    <a class="card ${favs.includes(e.region) && !currentRegion ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}`)}">
-      <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e.country_count)}</div>
-      <h3>${esc(e.title)}</h3>
-      ${e.one_line && e.one_line !== e.title ? `<p>${esc(e.one_line)}</p>` : ''}
-      <div class="countries">${pills(e.countries)}</div>
-      <div class="meta"><span>${esc(T.card_meta(e.country_count, e.article_count))}</span>${e.read_min ? `<span class="read" title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(ago(e.last_updated))}</span></div>
-    </a>`).join('');
+  grid.innerHTML = data.events.map((e) => cardHtml(e, { fav: favs.includes(e.region) && !currentRegion })).join('')
+    + (words.length ? '' : `<a class="archive-link" href="/archive">${esc(T.ar_more)}</a>`);
   // 처음 온 사람: 관심 지역 고르기
   // (?nolive 화면 캡처 모드에서는 &onboard가 있을 때만)
   const qs = new URLSearchParams(location.search);
@@ -501,9 +510,57 @@ function toast(msg) {
 }
 
 // ── 시작 ──
+// ── 지난 사건 (날짜별) ──
+let arDate = new URLSearchParams(location.search).get('date') || '';
+let arCat = '';
+// 'YYYY-MM-DD'(한국 날짜)를 화면 언어로: 11월 9일 (일)
+const fmtDate = (d) => new Date(`${d}T12:00:00+09:00`).toLocaleDateString(LOCALE(), { month: 'long', day: 'numeric', weekday: 'short', timeZone: 'Asia/Seoul' });
+async function renderArchive() {
+  $('#ar-heading').textContent = T.ar_heading;
+  $('#ar-intro').textContent = T.ar_intro;
+  $('#ar-note').textContent = T.ar_note;
+  const grid = $('#ar-events');
+  let idx;
+  try { idx = await getJson(`/data/${LANG}/days.json`); } catch {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(T.ar_empty)}</div>`;
+    return;
+  }
+  const days = idx.days || [];
+  if (!days.some((d) => d.date === arDate)) arDate = (days.find((d) => d.count) || days[0])?.date || '';
+  const nav = $('#days');
+  nav.setAttribute('aria-label', T.ar_days_label);
+  nav.innerHTML = days.map((d, i) => `<button type="button" class="day" data-d="${d.date}" aria-pressed="${d.date === arDate}" ${d.count ? '' : 'disabled'}>
+      <span class="dn">${esc(i === 0 ? T.ar_today : i === 1 ? T.ar_yesterday : fmtDate(d.date))}</span>
+      <span class="dc">${d.count ? esc(T.ar_count(d.count)) : '—'}</span>
+    </button>`).join('');
+  nav.querySelectorAll('.day').forEach((b) => b.addEventListener('click', () => {
+    arDate = b.dataset.d; arCat = '';
+    const u = new URL(location.href); u.searchParams.set('date', arDate); history.replaceState(null, '', u);
+    renderArchive();
+  }));
+  nav.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+  $('#ar-title').textContent = arDate ? T.ar_title(fmtDate(arDate)) : '';
+  let day;
+  try { day = await getJson(`/data/${LANG}/day/${arDate}.json`); } catch { day = { events: [] }; }
+  const list = day.events || [];
+  const catCounts = {};
+  for (const e of list) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
+  if (arCat && !catCounts[arCat]) arCat = '';
+  const cats = $('#ar-cats');
+  cats.innerHTML = list.length ? `<span class="chips-label">${esc(T.cat_label)}</span>
+    <button class="chip cat" aria-pressed="${!arCat}" data-c="">${esc(T.all)} <span class="c">${list.length}</span></button>
+    ${CAT_ORDER.filter((c) => catCounts[c]).map((c) => `<button class="chip cat" data-c="${c}" aria-pressed="${arCat === c}">${esc(T.cats[c])} <span class="c">${catCounts[c]}</span></button>`).join('')}` : '';
+  cats.querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => { arCat = c.dataset.c; renderArchive(); }));
+  const shown = arCat ? list.filter((e) => e.category === arCat) : list;
+  grid.innerHTML = shown.length ? shown.map((e) => cardHtml(e, { dayMeta: true })).join('')
+    : `<div class="empty" style="grid-column:1/-1">${esc(T.ar_empty)}</div>`;
+}
+
 function renderPage() {
   if (page === 'home') return renderHome();
   if (page === 'event') return renderEvent();
+  if (page === 'archive') return renderArchive();
   if (page === 'about') return renderAbout();
   if (page === 'policy') return renderPolicy();
 }

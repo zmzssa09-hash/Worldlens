@@ -22,6 +22,7 @@
       b_name: '상호', b_owner: '대표', b_reg: '사업자등록번호', b_mail: '통신판매업 신고', b_addr: '주소', b_pending: '사업자 정보 준비 중', contact_pending: '문의 이메일 준비 중',
       font_label: '글자 크기', font_sizes: ['보통', '크게', '아주 크게'],
       search_ph: '사건 검색 (예: 이란, 엔비디아, 선거)', search_label: '사건 검색', search_title: (q, n) => `‘${q}’ 검색 결과 ${n}개`, search_none: (q) => `‘${q}’에 맞는 사건이 없어요. 다른 낱말로 찾아보거나, 지역·주제를 ‘전체’로 바꿔 보세요.`,
+      nav_archive: '지난 사건', title_archive: '지난 사건 — WorldLens', ar_heading: '지난 사건', ar_intro: '날짜를 고르면 그날 여러 나라 언론이 함께 보도한 사건을 보여 드려요. 최근 2주까지 볼 수 있어요.', ar_title: (d) => `${d}의 사건`, ar_count: (n) => `${n}개`, ar_note: '한국 시간 기준 · 그날 보도한 나라가 많은 순', ar_today: '오늘', ar_yesterday: '어제', ar_empty: '이날은 여러 나라가 함께 보도한 사건이 없어요. 다른 날짜를 골라 보세요.', ar_day_meta: (c, n) => `이날 ${c}개국 · ${n}건`, ar_days_label: '날짜', ar_more: '지난 사건 날짜별로 보기 →',
       cat_label: '주제', cat_filter: '주제 필터', cats: {'politics':'정치·외교','conflict':'분쟁·안보','economy':'경제','tech':'과학·기술','climate':'환경·재난','health':'건강','society':'사회','culture':'문화·스포츠','other':'기타'},
     },
     en: {
@@ -44,6 +45,7 @@
       b_name: 'Business name', b_owner: 'Representative', b_reg: 'Business reg. no.', b_mail: 'Mail-order reg.', b_addr: 'Address', b_pending: 'Business details coming soon', contact_pending: 'contact email coming soon',
       font_label: 'Text size', font_sizes: ['Normal', 'Large', 'Extra large'],
       search_ph: 'Search events (e.g. Iran, Nvidia, election)', search_label: 'Search events', search_title: (q, n) => `${n} result${n === 1 ? '' : 's'} for “${q}”`, search_none: (q) => `No events match “${q}”. Try another word, or set the region and topic to All.`,
+      nav_archive: 'Past events', title_archive: 'Past events — WorldLens', ar_heading: 'Past events', ar_intro: 'Pick a date to see the events that news outlets in several countries covered that day. The last two weeks are available.', ar_title: (d) => `Events on ${d}`, ar_count: (n) => `${n}`, ar_note: 'Korea time · most countries reporting that day first', ar_today: 'Today', ar_yesterday: 'Yesterday', ar_empty: 'No event was covered by several countries on this day. Try another date.', ar_day_meta: (c, n) => `That day: ${c} countries · ${n} reports`, ar_days_label: 'Dates', ar_more: 'Browse past events by date →',
       cat_label: 'Topic', cat_filter: 'Topic filter', cats: {'politics':'Politics','conflict':'Conflict & security','economy':'Economy','tech':'Science & tech','climate':'Climate & disasters','health':'Health','society':'Society','culture':'Culture & sports','other':'Other'},
     },
     ja: {
@@ -66,6 +68,7 @@
       b_name: '商号', b_owner: '代表者', b_reg: '事業者登録番号', b_mail: '通信販売業申告', b_addr: '所在地', b_pending: '事業者情報は準備中です', contact_pending: 'お問い合わせ先メールは準備中です',
       font_label: '文字サイズ', font_sizes: ['標準', '大きく', 'とても大きく'],
       search_ph: '出来事を検索(例: イラン、エヌビディア、選挙)', search_label: '出来事を検索', search_title: (q, n) => `「${q}」の検索結果 ${n}件`, search_none: (q) => `「${q}」に合う出来事はありません。別の言葉で探すか、地域・テーマを「すべて」にしてみてください。`,
+      nav_archive: '過去の出来事', title_archive: '過去の出来事 — WorldLens', ar_heading: '過去の出来事', ar_intro: '日付を選ぶと、その日に複数の国の報道機関がそろって伝えた出来事を表示します。直近2週間までさかのぼれます。', ar_title: (d) => `${d}の出来事`, ar_count: (n) => `${n}件`, ar_note: '韓国時間 · その日に報じた国が多い順', ar_today: '今日', ar_yesterday: '昨日', ar_empty: 'この日は複数の国がそろって報じた出来事がありません。別の日付を選んでみてください。', ar_day_meta: (c, n) => `この日 ${c}か国 · ${n}件`, ar_days_label: '日付', ar_more: '過去の出来事を日付で見る →',
       cat_label: 'テーマ', cat_filter: 'テーマで絞り込み', cats: {'politics':'政治・外交','conflict':'紛争・安全保障','economy':'経済','tech':'科学・技術','climate':'環境・災害','health':'健康','society':'社会','culture':'文化・スポーツ','other':'その他'},
     },
     zh: {
@@ -88,6 +91,7 @@
       b_name: '商号', b_owner: '代表', b_reg: '营业执照号', b_mail: '通信销售业申报', b_addr: '地址', b_pending: '经营者信息准备中', contact_pending: '联系邮箱准备中',
       font_label: '字体大小', font_sizes: ['标准', '大', '特大'],
       search_ph: '搜索事件（例如：伊朗、英伟达、选举）', search_label: '搜索事件', search_title: (q, n) => `“${q}”的搜索结果：${n} 个`, search_none: (q) => `没有与“${q}”相符的事件。请换个词，或把地区和主题设为“全部”。`,
+      nav_archive: '往日事件', title_archive: '往日事件 — WorldLens', ar_heading: '往日事件', ar_intro: '选择日期，即可查看当天多国媒体共同报道的事件。最多可回看最近两周。', ar_title: (d) => `${d}的事件`, ar_count: (n) => `${n} 个`, ar_note: '韩国时间 · 按当天报道国家数量排序', ar_today: '今天', ar_yesterday: '昨天', ar_empty: '这一天没有多国共同报道的事件。请换个日期看看。', ar_day_meta: (c, n) => `当天 ${c} 国 · ${n} 篇`, ar_days_label: '日期', ar_more: '按日期查看往日事件 →',
       cat_label: '主题', cat_filter: '主题筛选', cats: {'politics':'政治·外交','conflict':'冲突·安全','economy':'经济','tech':'科技','climate':'环境·灾害','health':'健康','society':'社会','culture':'文化·体育','other':'其他'},
     },
     fr: {
@@ -110,6 +114,7 @@
       b_name: 'Raison sociale', b_owner: 'Représentant', b_reg: 'N° d’entreprise', b_mail: 'Déclaration de vente à distance', b_addr: 'Adresse', b_pending: 'Informations légales à venir', contact_pending: 'adresse de contact à venir',
       font_label: 'Taille du texte', font_sizes: ['Normale', 'Grande', 'Très grande'],
       search_ph: 'Rechercher (ex. Iran, Nvidia, élection)', search_label: 'Rechercher des événements', search_title: (q, n) => `${n} résultat${n > 1 ? 's' : ''} pour « ${q} »`, search_none: (q) => `Aucun événement ne correspond à « ${q} ». Essayez un autre mot ou choisissez « Tous » pour la région et le thème.`,
+      nav_archive: 'Archives', title_archive: 'Archives — WorldLens', ar_heading: 'Événements passés', ar_intro: 'Choisissez une date pour voir les événements couverts ce jour-là par des médias de plusieurs pays. Les deux dernières semaines sont disponibles.', ar_title: (d) => `Événements du ${d}`, ar_count: (n) => `${n}`, ar_note: 'Heure de Corée · par nombre de pays ce jour-là', ar_today: 'Aujourd’hui', ar_yesterday: 'Hier', ar_empty: 'Aucun événement n’a été couvert par plusieurs pays ce jour-là. Essayez une autre date.', ar_day_meta: (c, n) => `Ce jour-là : ${c} pays · ${n} articles`, ar_days_label: 'Dates', ar_more: 'Parcourir les événements passés par date →',
       cat_label: 'Thème', cat_filter: 'Filtre par thème', cats: {'politics':'Politique','conflict':'Conflits et sécurité','economy':'Économie','tech':'Sciences et tech','climate':'Climat et catastrophes','health':'Santé','society':'Société','culture':'Culture et sport','other':'Autres'},
     },
   };
