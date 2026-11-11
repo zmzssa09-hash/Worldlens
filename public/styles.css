@@ -101,6 +101,17 @@ h1, h2, h3 { font-family: var(--serif); letter-spacing: -.015em; line-height: 1.
 .brief-list .w { color: var(--ink-2); font-size: 0.9063rem; display: block; margin-top: 2px; }
 .closing { color: var(--ink-3); font-size: 0.9063rem; margin-top: 10px; }
 
+/* 홈: 검색창 */
+.search { position: relative; display: flex; align-items: center; margin: 22px 0 18px; }
+.searching #quick, .searching #briefing { display: none !important; }
+.search svg { position: absolute; left: 15px; color: var(--ink-3); pointer-events: none; }
+.search input { width: 100%; font: inherit; font-size: 1rem; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 44px 12px 44px; outline: none; -webkit-appearance: none; appearance: none; }
+.search input::placeholder { color: var(--ink-3); }
+.search input:focus { border-color: var(--ink-2); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ink) 12%, transparent); }
+.search-key { position: absolute; right: 14px; font: 600 0.75rem/1 ui-monospace, monospace; color: var(--ink-3); border: 1px solid var(--line); border-radius: 5px; padding: 3px 6px; pointer-events: none; }
+.search input:focus ~ .search-key, .search input:not(:placeholder-shown) ~ .search-key { display: none; }
+@media (hover: none) { .search-key { display: none; } }
+
 /* 홈: 지역 분포 */
 .world { margin: 8px 0 18px; }
 .world-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; background: var(--surface-2); margin: 10px 0 14px; }

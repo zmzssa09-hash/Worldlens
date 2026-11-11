@@ -15,7 +15,7 @@
           <li><b>언어와 시간의 벽이 있어요.</b> 매일 여러 나라 뉴스를 외국어로 찾아 읽을 여유가 있는 사람은 많지 않아요.</li></ul>`],
         ['핵심 컨셉과 차별점', `<p>핵심 컨셉은 <b>"렌즈"</b>예요. 한 사건을 여러 나라의 렌즈로 겹쳐 보면, 어디까지가 모두가 인정하는 사실이고 어디부터가 해석인지 드러납니다.</p>`,
           { head: ['', '일반 뉴스 앱', 'WorldLens'], rows: [['단위', '기사 하나하나', "여러 기사를 묶은 '사건'"], ['시각', '한 매체 또는 한 나라', '여러 나라 매체를 나란히 비교'], ['설명', '속보 위주', '배경·의미·전망까지 이야기로'], ['투명성', '출처 구분이 약함', '사실마다 출처, 국영 매체 표시, 가설에는 확신도'], ['언어', '한 가지 언어', '한국어·영어·일본어·중국어·프랑스어']] }],
-        ['글로벌 뉴스 수집 및 통합 시스템', `<p>지금은 한국, 일본, 중국, 홍콩, 인도, 카타르, 튀르키예, 러시아, 영국, 독일, 프랑스, 미국, 우루과이, 호주, 아프리카 종합 매체까지 16개 언론사의 공개 RSS를 매시간 수집해요.</p>`,
+        ['글로벌 뉴스 수집 및 통합 시스템', `<p>지금은 아시아·중동·유럽·미주·아프리카·오세아니아의 55개국 86개 언론사가 내는 영어판 공개 RSS를 약 20~30분마다 수집해요. 한국·일본·중국·인도·이스라엘·이란·사우디·튀르키예·러시아·우크라이나·영국·프랑스·미국·브라질·나이지리아·케냐·남아공·호주·뉴질랜드 등 서로 입장이 다른 나라의 매체를 고루 넣었어요.</p>`,
           { flow: [['① 수집', '각 언론사 RSS에서 제목·요약·링크를 가져와요'], ['② 정리·번역', '중복 기사를 걸러내고 5개 언어로 번역해요'], ['③ 묶기', '핵심 단어가 겹치는 기사를 같은 사건으로 묶어요'], ['④ 분석', '사건마다 사실·관점·가설·스토리를 만들어요']] },
           `<p>일부 매체가 응답하지 않아도 나머지 매체로 계속 동작해요. 기사 전문은 저장하지 않고, 원문은 언제나 언론사 링크로 연결합니다.</p>`],
         ['AI 분석 및 중립성 확보 구조', `<p>AI가 "정답"을 말해 주는 대신, 독자가 스스로 판단할 수 있게 재료를 정리하는 것이 목표예요. 그래서 분석에 다음 원칙을 고정해 두었어요.</p>
@@ -29,7 +29,7 @@
         ['스토리텔링 콘텐츠 구성', `<p>뉴스를 처음 접하는 사람도 3분 안에 이해할 수 있도록, 모든 사건을 같은 네 단계 이야기로 풀어요.</p>`,
           { flow: [['배경', '이 일은 어디서부터 시작됐나'], ['무슨 일이', '지금 실제로 일어난 일'], ['왜 중요한가', '나와 세계에 어떤 의미가 있나'], ['앞으로 볼 것', '다음에 지켜볼 지점']] },
           '<p>문장은 짧게, 전문 용어는 처음 나올 때 풀어서 씁니다.</p>'],
-        ['실시간 뉴스 수집 및 매일 업데이트 구조', `<ul><li><b>매시간</b> 새 기사를 수집하고 사건에 이어 붙여요.</li>
+        ['실시간 뉴스 수집 및 매일 업데이트 구조', `<ul><li><b>약 20~30분마다</b> 새 기사를 수집하고 사건에 이어 붙여요.</li>
           <li><b>몇 시간마다</b> 새 기사가 충분히 쌓인 사건만 다시 분석해요. 바뀐 게 없으면 다시 분석하지 않아 비용을 아껴요.</li>
           <li><b>매일 아침 7시</b> 그날 가장 많이 보도된 사건으로 '오늘의 세계 브리핑'을 만들어요.</li>
           <li>급할 때는 화면 위의 <b>새로고침</b> 버튼으로 바로 갱신할 수 있어요.</li></ul>`],
@@ -54,7 +54,7 @@
           <li><b>Language and time are barriers.</b> Few people can read foreign-language news from many countries every day.</li></ul>`],
         ['Core concept and what’s different', `<p>The core concept is a <b>lens</b>. When you look at an event through several countries’ lenses at once, it becomes clear what everyone agrees is fact and where interpretation begins.</p>`,
           { head: ['', 'Typical news app', 'WorldLens'], rows: [['Unit', 'Individual articles', 'Events made of many articles'], ['Viewpoint', 'One outlet or one country', 'Many countries’ media side by side'], ['Explanation', 'Mostly breaking news', 'Background, meaning and outlook as a story'], ['Transparency', 'Sources often unclear', 'Sources for every fact, state-media labels, confidence on hypotheses'], ['Language', 'One language', 'Korean, English, Japanese, Chinese, French']] }],
-        ['Global news collection', `<p>We currently collect public RSS feeds from 16 outlets every hour — from South Korea, Japan, China, Hong Kong, India, Qatar, Türkiye, Russia, the UK, Germany, France, the US, Uruguay, Australia and a pan-African outlet.</p>`,
+        ['Global news collection', `<p>We currently collect the English-language public RSS feeds of 86 outlets in 55 countries across Asia, the Middle East, Europe, the Americas, Africa and Oceania, roughly every 20–30 minutes — deliberately mixing countries with different stances, from South Korea, Japan, China and India to Israel, Iran, Saudi Arabia, Türkiye, Russia, Ukraine, the UK, France, the US, Brazil, Nigeria, Kenya, South Africa, Australia and New Zealand.</p>`,
           { flow: [['① Collect', 'Titles, summaries and links from each outlet’s RSS'], ['② Clean & translate', 'Remove duplicates and translate into 5 languages'], ['③ Group', 'Articles sharing key words become one event'], ['④ Analyse', 'Facts, perspectives, hypotheses and a story for each event']] },
           '<p>If some outlets don’t respond, the rest keep working. We never store full articles — originals are always linked on the publisher’s site.</p>'],
         ['AI analysis and neutrality', `<p>Instead of giving you “the answer”, the AI organises the material so you can judge for yourself. These rules are fixed in every analysis:</p>
@@ -68,7 +68,7 @@
         ['Storytelling', `<p>So that anyone can understand an event in three minutes, every event is told in the same four steps.</p>`,
           { flow: [['Background', 'Where did this start?'], ['What happened', 'What actually happened now'], ['Why it matters', 'What it means for you and the world'], ['What to watch', 'What to look out for next']] },
           '<p>Sentences are short, and technical terms are explained the first time they appear.</p>'],
-        ['Real-time collection and daily updates', `<ul><li><b>Every hour</b>, new articles are collected and attached to events.</li>
+        ['Real-time collection and daily updates', `<ul><li><b>Roughly every 20–30 minutes</b>, new articles are collected and attached to events.</li>
           <li><b>Every few hours</b>, only events with enough new coverage are re-analysed — nothing changes, nothing is re-run, which keeps costs down.</li>
           <li><b>Every morning at 7</b>, “Today’s world briefing” is built from the day’s most-covered events.</li>
           <li>Need it now? Use the <b>Refresh</b> button at the top.</li></ul>`],
@@ -93,7 +93,7 @@
           <li><b>言語と時間の壁。</b> 毎日、外国語で各国のニュースを読む余裕のある人は多くない。</li></ul>`],
         ['コアコンセプトと違い', `<p>コアコンセプトは<b>「レンズ」</b>です。一つの出来事を複数の国のレンズで重ねて見ると、どこまでが皆が認める事実で、どこからが解釈なのかが見えてきます。</p>`,
           { head: ['', '一般的なニュースアプリ', 'WorldLens'], rows: [['単位', '記事一つひとつ', '複数の記事をまとめた「出来事」'], ['視点', '一つのメディアや一つの国', '各国のメディアを並べて比較'], ['説明', '速報中心', '背景・意味・見通しまでストーリーで'], ['透明性', '出典の区別が弱い', '事実ごとの出典、国営メディア表示、仮説には確信度'], ['言語', '一つの言語', '韓国語・英語・日本語・中国語・フランス語']] }],
-        ['グローバルニュース収集・統合システム', `<p>現在、韓国、日本、中国、香港、インド、カタール、トルコ、ロシア、イギリス、ドイツ、フランス、アメリカ、ウルグアイ、オーストラリア、アフリカ総合メディアまで、16の報道機関の公開RSSを1時間ごとに収集しています。</p>`,
+        ['グローバルニュース収集・統合システム', `<p>現在、アジア・中東・ヨーロッパ・南北アメリカ・アフリカ・オセアニアの55か国86の報道機関が出す英語版の公開RSSを、約20〜30分ごとに収集しています。韓国・日本・中国・インド・イスラエル・イラン・サウジアラビア・トルコ・ロシア・ウクライナ・イギリス・フランス・アメリカ・ブラジル・ナイジェリア・ケニア・南アフリカ・オーストラリア・ニュージーランドなど、立場の異なる国のメディアをバランスよく入れています。</p>`,
           { flow: [['① 収集', '各メディアのRSSから見出し・要約・リンクを取得'], ['② 整理・翻訳', '重複を除き、5言語に翻訳'], ['③ まとめる', 'キーワードが重なる記事を同じ出来事に'], ['④ 分析', '出来事ごとに事実・視点・仮説・ストーリーを作成']] },
           '<p>一部のメディアが応答しなくても、残りで動き続けます。記事全文は保存せず、原文は常に報道機関のリンクで案内します。</p>'],
         ['AI分析と中立性を保つ仕組み', `<p>AIが「正解」を示すのではなく、読者が自分で判断できるよう材料を整理することが目的です。そのため、分析には次の原則を固定しています。</p>
@@ -107,7 +107,7 @@
         ['ストーリーテリング', `<p>初めてニュースに触れる人でも3分で理解できるよう、すべての出来事を同じ4つのステップで語ります。</p>`,
           { flow: [['背景', 'これはどこから始まったのか'], ['何が起きたか', 'いま実際に起きたこと'], ['なぜ重要か', '自分と世界にとっての意味'], ['今後の注目点', '次に見ておくべきポイント']] },
           '<p>文は短く、専門用語は初めて出るときに説明します。</p>'],
-        ['リアルタイム収集と毎日の更新', `<ul><li><b>1時間ごと</b>に新しい記事を集め、出来事につなげます。</li>
+        ['リアルタイム収集と毎日の更新', `<ul><li><b>約20〜30分ごと</b>に新しい記事を集め、出来事につなげます。</li>
           <li><b>数時間ごと</b>に、新しい記事が十分に増えた出来事だけを再分析します。変化がなければ再分析しないのでコストを抑えられます。</li>
           <li><b>毎朝7時</b>に、その日最も報じられた出来事で「今日の世界ブリーフィング」を作ります。</li>
           <li>急ぐときは画面上の<b>更新</b>ボタンですぐに更新できます。</li></ul>`],
@@ -132,7 +132,7 @@
           <li><b>语言与时间的壁垒。</b>很少有人每天有空用外语阅读多国新闻。</li></ul>`],
         ['核心理念与差异', `<p>核心理念是<b>“透镜”</b>。用多个国家的透镜叠加观察同一事件，就能看清哪些是公认的事实，哪些是解读。</p>`,
           { head: ['', '一般新闻应用', 'WorldLens'], rows: [['单位', '一篇篇报道', '由多篇报道组成的“事件”'], ['视角', '一家媒体或一个国家', '多国媒体并排比较'], ['解读', '以快讯为主', '以故事讲清背景、意义与展望'], ['透明度', '来源区分不清', '每条事实标注来源，标示官方媒体，假设附可信度'], ['语言', '单一语言', '韩语、英语、日语、中文、法语']] }],
-        ['全球新闻采集与整合', `<p>目前每小时采集16家媒体的公开 RSS，覆盖韩国、日本、中国、香港、印度、卡塔尔、土耳其、俄罗斯、英国、德国、法国、美国、乌拉圭、澳大利亚以及泛非洲媒体。</p>`,
+        ['全球新闻采集与整合', `<p>目前大约每 20～30 分钟采集一次亚洲、中东、欧洲、美洲、非洲和大洋洲 55 个国家 86 家媒体的英文版公开 RSS，并有意兼顾立场不同的国家：韩国、日本、中国、印度、以色列、伊朗、沙特、土耳其、俄罗斯、乌克兰、英国、法国、美国、巴西、尼日利亚、肯尼亚、南非、澳大利亚、新西兰等。</p>`,
           { flow: [['① 采集', '从各媒体 RSS 获取标题、摘要和链接'], ['② 整理·翻译', '去除重复，并翻译成5种语言'], ['③ 归类', '关键词重合的报道归为同一事件'], ['④ 分析', '为每个事件生成事实、视角、假设和故事']] },
           '<p>即使部分媒体无响应，其余媒体照常运作。我们不保存报道全文，原文始终链接至媒体网站。</p>'],
         ['AI 分析与中立性机制', `<p>AI 不是给出“标准答案”，而是整理素材，让读者自行判断。因此，分析中固定遵循以下原则：</p>
@@ -146,7 +146,7 @@
         ['故事化内容结构', `<p>为了让初次接触的人也能在3分钟内读懂，每个事件都用同样的四个步骤讲述。</p>`,
           { flow: [['背景', '这件事从何而起'], ['发生了什么', '现在实际发生的事'], ['为什么重要', '对你和世界意味着什么'], ['接下来关注什么', '下一步值得留意的地方']] },
           '<p>句子简短，专业术语首次出现时会加以解释。</p>'],
-        ['实时采集与每日更新', `<ul><li><b>每小时</b>采集新报道并归入事件。</li>
+        ['实时采集与每日更新', `<ul><li><b>大约每 20～30 分钟</b>采集新报道并归入事件。</li>
           <li><b>每隔几小时</b>只重新分析新报道足够多的事件；没有变化就不重复分析，以节省成本。</li>
           <li><b>每天早上7点</b>用当天报道最多的事件生成“今日世界简报”。</li>
           <li>着急时，可点击页面顶部的<b>刷新</b>按钮立即更新。</li></ul>`],
@@ -171,7 +171,7 @@
           <li><b>La langue et le temps sont des obstacles.</b> Peu de gens peuvent lire chaque jour l’actualité de nombreux pays en langue étrangère.</li></ul>`],
         ['Concept et différence', `<p>Le concept central est une <b>lentille</b>. En superposant les regards de plusieurs pays sur un même événement, on voit ce que tous reconnaissent comme des faits et où commence l’interprétation.</p>`,
           { head: ['', 'Application d’actualité classique', 'WorldLens'], rows: [['Unité', 'Des articles isolés', 'Des événements regroupant plusieurs articles'], ['Regard', 'Un média ou un pays', 'Les médias de plusieurs pays, côte à côte'], ['Explication', 'Surtout des dépêches', 'Contexte, enjeux et perspectives sous forme de récit'], ['Transparence', 'Sources peu distinguées', 'Source pour chaque fait, médias publics signalés, niveau de confiance des hypothèses'], ['Langues', 'Une seule langue', 'Coréen, anglais, japonais, chinois, français']] }],
-        ['Collecte mondiale de l’actualité', `<p>Nous collectons chaque heure les flux RSS publics de 16 médias : Corée du Sud, Japon, Chine, Hong Kong, Inde, Qatar, Turquie, Russie, Royaume-Uni, Allemagne, France, États-Unis, Uruguay, Australie et un média panafricain.</p>`,
+        ['Collecte mondiale de l’actualité', `<p>Nous collectons environ toutes les 20 à 30 minutes les flux RSS publics en anglais de 86 médias de 55 pays d’Asie, du Moyen-Orient, d’Europe, des Amériques, d’Afrique et d’Océanie, en mêlant volontairement des pays aux positions différentes : Corée du Sud, Japon, Chine, Inde, Israël, Iran, Arabie saoudite, Turquie, Russie, Ukraine, Royaume-Uni, France, États-Unis, Brésil, Nigeria, Kenya, Afrique du Sud, Australie, Nouvelle-Zélande…</p>`,
           { flow: [['① Collecte', 'Titres, résumés et liens depuis le RSS de chaque média'], ['② Tri et traduction', 'Suppression des doublons et traduction en 5 langues'], ['③ Regroupement', 'Les articles aux mots-clés communs forment un événement'], ['④ Analyse', 'Faits, points de vue, hypothèses et récit pour chaque événement']] },
           '<p>Si certains médias ne répondent pas, les autres continuent de fonctionner. Nous ne stockons jamais les articles complets : les originaux sont toujours liés sur le site de l’éditeur.</p>'],
         ['Analyse IA et neutralité', `<p>Plutôt que de donner « la bonne réponse », l’IA organise les éléments pour que vous puissiez juger par vous-même. Ces règles s’appliquent à chaque analyse :</p>
@@ -185,7 +185,7 @@
         ['Mise en récit', `<p>Pour que chacun puisse comprendre un événement en trois minutes, tous sont racontés en quatre étapes identiques.</p>`,
           { flow: [['Contexte', 'D’où cela vient-il ?'], ['Ce qui s’est passé', 'Ce qui se passe réellement'], ['Pourquoi c’est important', 'Ce que cela signifie pour vous et le monde'], ['À surveiller', 'Les points à suivre ensuite']] },
           '<p>Les phrases sont courtes et les termes techniques expliqués à leur première apparition.</p>'],
-        ['Collecte en temps réel et mises à jour quotidiennes', `<ul><li><b>Toutes les heures</b>, de nouveaux articles sont collectés et rattachés aux événements.</li>
+        ['Collecte en temps réel et mises à jour quotidiennes', `<ul><li><b>Environ toutes les 20 à 30 minutes</b>, de nouveaux articles sont collectés et rattachés aux événements.</li>
           <li><b>Toutes les quelques heures</b>, seuls les événements ayant assez de nouvelle couverture sont réanalysés — rien ne change, rien n’est relancé, ce qui limite les coûts.</li>
           <li><b>Chaque matin à 7 h</b>, « Le point sur le monde » est créé à partir des événements les plus couverts.</li>
           <li>Pressé ? Utilisez le bouton <b>Actualiser</b> en haut de la page.</li></ul>`],

@@ -62,7 +62,7 @@ GitHub 저장소 → **Settings → Secrets and variables → Actions**
 ## 폴더 구조
 
 ```
-src/sources.js      수집하는 16개 매체와 언어·나라 이름
+src/sources.js      수집하는 55개국 86개 매체(모두 영어판)와 언어·나라 이름
 src/collector.js    RSS 수집
 src/clusterer.js    기사를 사건으로 묶기
 src/category.js     사건 주제 나누기 (영어 원문 낱말 기준)

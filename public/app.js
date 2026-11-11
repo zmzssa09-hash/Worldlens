@@ -161,15 +161,56 @@ const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 
 // ── 홈 ──
 let currentRegion = '';
 let currentCat = '';
+// 검색: 띄어 쓴 낱말이 모두 들어간 사건만 (제목·한 줄 요약·영어 원문 제목·나라·지역·주제에서 찾음)
+let searchQ = new URLSearchParams(location.search).get('q') || '';
+let homeCache = null; // 검색어를 칠 때마다 파일을 다시 받지 않도록 마지막 데이터를 기억
+const norm = (s) => String(s || '').toLowerCase().normalize('NFKC');
+function matchesSearch(e, words) {
+  const hay = norm([e.title, e.one_line, e.orig_title, T.regions[e.region], T.cats?.[e.category], ...(e.countries || []).map((c) => c.name)].join(' '));
+  return words.every((w) => hay.includes(w));
+}
+function setupSearch() {
+  const q = $('#q');
+  if (!q) return;
+  q.placeholder = T.search_ph; // 언어를 바꾸면 다시 그리므로 매번 설정
+  q.setAttribute('aria-label', T.search_label);
+  if (q.dataset.ready) return;
+  q.dataset.ready = '1';
+  q.value = searchQ;
+  let timer;
+  q.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      searchQ = q.value.trim();
+      const u = new URL(location.href);
+      if (searchQ) u.searchParams.set('q', searchQ); else u.searchParams.delete('q');
+      history.replaceState(null, '', u);
+      renderHome(true);
+    }, 120);
+  });
+  q.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && q.value) { q.value = ''; q.dispatchEvent(new Event('input')); } });
+  // '/' 키로 바로 검색창으로
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key !== '/' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    const t = ev.target;
+    if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return;
+    ev.preventDefault(); q.focus();
+  });
+}
 const CAT_ORDER = ['politics', 'conflict', 'economy', 'tech', 'climate', 'health', 'society', 'culture', 'other'];
 const ORDER = ['asia', 'europe', 'middle-east', 'americas', 'africa', 'oceania', 'global'];
-async function renderHome() {
-  const [briefing, all] = await Promise.all([api.briefing(), api.events()]);
+async function renderHome(useCache = false) {
+  setupSearch();
+  if (!useCache || !homeCache) homeCache = await Promise.all([api.briefing(), api.events()]);
+  const [briefing, all] = homeCache;
   const inRegion = currentRegion ? all.events.filter((e) => e.region === currentRegion) : all.events;
   const catCounts = {};
   for (const e of inRegion) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
   if (currentCat && !catCounts[currentCat]) currentCat = '';
-  const data = { region_counts: all.region_counts, events: (currentCat ? inRegion.filter((e) => e.category === currentCat) : inRegion).slice(0, 60) };
+  const words = norm(searchQ).split(/\s+/).filter(Boolean);
+  document.body.classList.toggle('searching', words.length > 0); // 검색 중에는 요약·브리핑을 숨겨 결과가 바로 보이게
+  const picked = (currentCat ? inRegion.filter((e) => e.category === currentCat) : inRegion).filter((e) => !words.length || matchesSearch(e, words));
+  const data = { region_counts: all.region_counts, events: picked.slice(0, 60) };
   const s = window.__status;
   const today = new Date().toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
@@ -213,7 +254,8 @@ async function renderHome() {
   $('#world').querySelectorAll('.chip:not(.cat)').forEach((c) => c.addEventListener('click', () => { currentRegion = c.dataset.r; renderHome(); }));
   $('#world').querySelectorAll('.chip.cat').forEach((c) => c.addEventListener('click', () => { currentCat = c.dataset.c; renderHome(); }));
 
-  $('#events-title').textContent = (currentRegion ? T.events_region(T.regions[currentRegion]) : T.events_title) + (currentCat ? ` · ${T.cats[currentCat]}` : '');
+  $('#events-title').textContent = words.length ? T.search_title(searchQ, picked.length)
+    : (currentRegion ? T.events_region(T.regions[currentRegion]) : T.events_title) + (currentCat ? ` · ${T.cats[currentCat]}` : '');
   $('#sort-note').textContent = T.sort_note;
   // 관심 지역: 그 지역 사건을 앞으로 (전체 보기일 때만)
   const favs = FAV || [];
@@ -226,6 +268,10 @@ async function renderHome() {
     data.events = data.events.map((e, i) => [e, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(([e]) => e);
   }
   const grid = $('#events');
+  if (!data.events.length && words.length) {
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(T.search_none(searchQ))}</div>`;
+    return;
+  }
   if (!data.events.length) {
     grid.innerHTML = s?.running || !s?.last_refresh
       ? `<div class="empty" style="grid-column:1/-1"><div class="spinner"></div>${esc(T.empty_collecting)}</div>`

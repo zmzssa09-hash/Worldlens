@@ -39,6 +39,7 @@ export function eventCard(e, lang) {
   return {
     id: e.id,
     title: localTitle(e, lang),
+    orig_title: lang === 'en' ? undefined : e.title, // 검색용 (영어 원문 제목)
     one_line: a?.lang === lang ? a.data?.one_line || null : null,
     region: e.region,
     category: guessCategory(arts),
