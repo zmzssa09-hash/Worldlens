@@ -3,6 +3,8 @@
 // (가설·전망은 만들지 않고, 화면에 '데모' 표시가 붙는다)
 import { countryName } from '../sources.js';
 import { cleanSummary } from '../textclean.js';
+import { guessCategory } from '../category.js';
+import { guessImpact } from './impact.js';
 
 const LOCALE = { ko: 'ko-KR', en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -85,67 +87,6 @@ const T = {
   },
 };
 
-// ── '나한테 무슨 상관?' (데모: 영어 원문에 나온 낱말로 주제를 짐작) ──
-const TOPICS = [
-  ['energy', /\b(oil|crude|opec|lng|energy|fuel|petrol|gasoline|electricity|power grid)\b/gi],
-  ['markets', /\b(stocks?|shares|markets?|inflation|interest rates?|central bank|currenc(?:y|ies)|dollar|yen|yuan|bonds?|recession|economy|economic)\b/gi],
-  ['trade', /\b(tariffs?|trade|exports?|imports?|supply chains?|sanctions?|shipping)\b/gi],
-  ['conflict', /\b(war|missiles?|troops|military|army|drones?|air ?strikes?|invasion|ceasefire|shelling|nuclear|weapons?)\b/gi],
-  ['travel', /\b(flights?|airports?|airlines?|aviation|visas?|tourism|tourists?|travel)\b/gi],
-  ['disaster', /\b(earthquakes?|floods?|flooding|storms?|hurricanes?|typhoons?|cyclones?|wildfires?|drought|heatwaves?|climate|volcan\w*|tsunami)\b/gi],
-  ['health', /\b(virus|outbreaks?|vaccines?|diseases?|pandemic|epidemic|health|hospitals?|cholera|measles)\b/gi],
-  ['tech', /\b(ai|artificial intelligence|chips?|semiconductors?|technology|tech|cyber\w*|hack\w*|smartphones?)\b/gi],
-  ['safety', /\b(shootings?|terror\w*|bomb\w*|gunman|stabbing|attackers?|police)\b/gi],
-  ['politics', /\b(elections?|vote|voters|president|parliament|government|ministers?|coalition|summit|diplomat\w*|talks)\b/gi],
-];
-const IMPACT = {
-  ko: {
-    energy: '기름값·전기·가스 요금', markets: '환율·금리·주식 투자', trade: '수입품 가격과 수출 기업', conflict: '국제 안보와 그 지역 여행·항공편',
-    travel: '해외여행과 항공편', disaster: '그 지역 여행과 농산물·식료품 가격', health: '건강과 해외여행 때 주의할 점',
-    tech: '내가 쓰는 기기·서비스와 관련 산업', safety: '그 나라에 살거나 여행하는 사람들의 안전', politics: '나라 사이의 외교·무역 관계',
-    say: (x, y) => (y ? `${x}, 그리고 ${y}에 영향이 있을 수 있어요.` : `${x}에 영향이 있을 수 있어요.`),
-    none: '당장 일상에 주는 직접 영향은 크지 않아 보여요. 다만 세계 흐름을 이해하는 데 도움이 되는 소식이에요.',
-  },
-  en: {
-    energy: 'fuel prices and energy bills', markets: 'exchange rates, interest rates and investments', trade: 'the price of imported goods and exporting businesses',
-    conflict: 'global security and travel or flights in the region', travel: 'overseas travel and flights', disaster: 'travel to the area and food prices',
-    health: 'your health and precautions when travelling', tech: 'the devices and services you use, and related industries',
-    safety: 'the safety of people living in or visiting the country', politics: 'diplomatic and trade ties between countries',
-    say: (x, y) => (y ? `This could affect ${x}, as well as ${y}.` : `This could affect ${x}.`),
-    none: 'It may not affect daily life directly for now, but it helps to understand where the world is heading.',
-  },
-  ja: {
-    energy: 'ガソリン代や電気・ガス料金', markets: '為替・金利・株式投資', trade: '輸入品の価格や輸出企業', conflict: '国際的な安全保障や、その地域への旅行・航空便',
-    travel: '海外旅行や航空便', disaster: 'その地域への旅行や農産物・食料品の価格', health: '健康や海外旅行時の注意点',
-    tech: '使っている機器・サービスや関連産業', safety: 'その国に住む人や旅行する人の安全', politics: '国と国との外交・貿易関係',
-    say: (x, y) => (y ? `${x}、そして${y}に影響が出るかもしれません。` : `${x}に影響が出るかもしれません。`),
-    none: '今すぐ日常生活に直接影響することはなさそうです。ただ、世界の流れを理解するのに役立つニュースです。',
-  },
-  zh: {
-    energy: '油价和水电燃气费用', markets: '汇率、利率和投资', trade: '进口商品价格和出口企业', conflict: '国际安全局势以及该地区的出行和航班',
-    travel: '出境旅行和航班', disaster: '前往该地区的出行以及农产品和食品价格', health: '健康状况和出境旅行时的注意事项',
-    tech: '你使用的设备、服务及相关产业', safety: '在当地生活或旅行的人的安全', politics: '国与国之间的外交和贸易关系',
-    say: (x, y) => (y ? `这可能会影响${x}，以及${y}。` : `这可能会影响${x}。`),
-    none: '目前对日常生活似乎没有直接影响，但有助于了解世界的走向。',
-  },
-  fr: {
-    energy: 'les prix des carburants et les factures d’énergie', markets: 'les taux de change, les taux d’intérêt et les placements',
-    trade: 'le prix des produits importés et les entreprises exportatrices', conflict: 'la sécurité internationale et les voyages ou vols dans la région',
-    travel: 'les voyages à l’étranger et les vols', disaster: 'les voyages dans la région et les prix alimentaires',
-    health: 'votre santé et les précautions en voyage', tech: 'les appareils et services que vous utilisez, et les secteurs liés',
-    safety: 'la sécurité des habitants et des visiteurs du pays', politics: 'les relations diplomatiques et commerciales entre pays',
-    say: (x, y) => (y ? `Cela pourrait toucher ${x}, ainsi que ${y}.` : `Cela pourrait toucher ${x}.`),
-    none: 'Pas d’effet direct sur le quotidien pour l’instant, mais une information utile pour comprendre l’évolution du monde.',
-  },
-};
-function guessImpact(articles, lang) {
-  const text = articles.map((a) => `${a.title} ${a.summary || ''}`).join(' ');
-  const scored = TOPICS.map(([k, re]) => [k, (text.match(re) || []).length]).filter(([, n]) => n >= 2).sort((x, y) => y[1] - x[1]);
-  const L = IMPACT[lang];
-  if (!scored.length) return L.none;
-  return L.say(L[scored[0][0]], scored[1] ? L[scored[1][0]] : null);
-}
-
 // ── 나라별 관점: 비판적 / 중립 / 우호적 '추정' (데모 전용) ──
 // 영어 원문의 부정·긍정 낱말 수로 각 매체의 논조 점수를 낸 뒤, 같은 사건을 다룬 매체들의 평균과 비교함
 // → 사건 자체가 슬픈 소식이라 다들 어둡게 썼으면 모두 '중립'. 평균보다 확실히 더 부정적·긍정적인 곳만 나눔
@@ -215,13 +156,15 @@ export function analyzeEvent(event, articles, lang = 'ko') {
   const pickLine = (max) => firstComplete(lineCands, max) || (done(rep) ? title(rep) : '');
   const oneLine = pickLine(220);
   const whatHappened = pickLine(400);
+  const impact = guessImpact(articles, lang, guessCategory(articles));
   const stances = guessStances(articles, shown.map((a) => a.source_id));
 
   return {
     title: title(rep),
     one_line: oneLine,
     where: null, // 데모: 화면에서 지역 이름으로 대신 보여 줌
-    impact: guessImpact(articles, lang),
+    impact: impact.text,
+    impact_tip: impact.tip,
     facts: facts.map((a) => ({ text: firstSentence(summary(a)), sources: [a.source_id] })),
     stance_target: '', // 데모: 대상을 알 수 없어 '다른 매체와 비교한 논조'로만 추정
     stance_guess: true, // 화면에 '추정' 표시

@@ -392,6 +392,7 @@ dialog.onboard .muted + .ob-sec { margin-top: 0; }
 .impact { background: var(--accent-soft); border-color: transparent; }
 .impact h2 { font-size: 1rem; font-family: var(--sans); color: var(--accent); margin: 0 0 6px; }
 .impact p { margin: 0; }
+.impact p.impact-tip { margin-top: 10px; padding-top: 10px; border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent); font-size: 0.9375rem; }
 .guess { color: var(--ink-3); font-size: 0.7813rem; margin: 8px 0 0 !important; }
 
 /* ── 사건: 보도량 그래프 ── */

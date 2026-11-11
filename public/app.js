@@ -418,6 +418,7 @@ function glanceHtml(e, a) {
       <div><dt>${esc(T.g_where)}</dt><dd>${esc(where)}</dd></div>
       ${why ? `<div><dt>${esc(T.g_why)}</dt><dd>${esc(why)}</dd></div>` : ''}</dl></section>
     ${a.impact ? `<section class="impact" aria-labelledby="i-title"><h2 id="i-title"><span aria-hidden="true">💡</span> ${esc(T.impact_title)}</h2><p>${esc(a.impact)}</p>
+      ${a.impact_tip ? `<p class="impact-tip"><span aria-hidden="true">👉</span> ${esc(a.impact_tip)}</p>` : ''}
       ${demo ? `<p class="guess">${esc(T.demo_guess)}</p>` : ''}</section>` : ''}
   </div>`;
 }
