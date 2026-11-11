@@ -16,6 +16,7 @@ const LEAD = [
   /^[^\sA-Za-z,.:!?()、，。]{1,12}(?:[ ,、，]\s*[^\s,.:!?()、，。]{1,15})?(?:\s*[—–－]+\s*|\s+-\s+)/,
   /^[^—–]{1,30}?\d{1,2}\s*月\s*\d{1,2}\s*日\s*[—–]+\s*/, // 번역문의 날짜 머리: "…，11 月 9 日——"
   /^\((?:LEAD|2nd LD|URGENT|AMBIENT|News Focus|Yonhap Feature)[^)]*\)\s*/i,
+  /^\[[^\]]{1,30}\]\s*(?=\S)/, // AllAfrica 요약 앞 꼬리표: "[UN News] ", 번역된 "[오늘] "
 ];
 const TAIL = [
   /\s*Read (?:the )?Full Article at \S+\s*$/i,

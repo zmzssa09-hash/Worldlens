@@ -374,7 +374,11 @@ dialog.onboard .muted { margin: 0 0 18px; font-size: 0.9375rem; }
 .ob-chip i { width: 10px; height: 10px; border-radius: 3px; background: var(--rc); flex: none; }
 .ob-chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); font-weight: 700; }
 .ob-chip[aria-pressed="true"]::after { content: "✓"; margin-left: auto; color: var(--accent); }
-.ob-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.ob-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; position: sticky; bottom: -20px; padding: 12px 0 4px; background: var(--surface); }
+dialog.onboard { max-height: calc(100vh - 40px); overflow-y: auto; }
+.ob-sec { font-size: 0.8125rem; font-weight: 700; color: var(--ink-3); letter-spacing: .02em; margin: 16px 0 8px; font-family: inherit; }
+dialog.onboard .muted + .ob-sec { margin-top: 0; }
+.ob-grid.cats .ob-chip { padding: 10px 14px; }
 
 /* ── 사건: 한눈에 보기 + 나한테 무슨 상관? ── */
 .glance-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px; max-width: 980px; margin: 12px 0 6px; }

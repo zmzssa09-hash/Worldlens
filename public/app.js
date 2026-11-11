@@ -31,6 +31,14 @@ function saveFav(list) {
   FAV = list;
   try { localStorage.setItem('wl-regions', JSON.stringify(list)); } catch {}
 }
+// 관심 주제 ('기타'는 고를 수 없음)
+const FAV_CAT_KEYS = ['politics', 'conflict', 'economy', 'tech', 'climate', 'health', 'society', 'culture'];
+let FAV_CATS = [];
+try { const v = JSON.parse(localStorage.getItem('wl-cats') || '[]'); FAV_CATS = Array.isArray(v) ? v.filter((c) => FAV_CAT_KEYS.includes(c)) : []; } catch {}
+function saveFavCats(list) {
+  FAV_CATS = list;
+  try { localStorage.setItem('wl-cats', JSON.stringify(list)); } catch {}
+}
 
 // 첫 문장만 (한눈에 보기용)
 const firstSentence = (t = '') => (String(t).match(/^.{12,}?[.!?。！？](?=\s|$)|^.{12,}?[。！？]/)?.[0] || String(t)).trim();
@@ -226,7 +234,7 @@ async function renderHome(useCache = false) {
   const words = norm(searchQ).split(/\s+/).filter(Boolean);
   document.body.classList.toggle('searching', words.length > 0); // 검색 중에는 요약·브리핑을 숨겨 결과가 바로 보이게
   const picked = (currentCat ? inRegion.filter((e) => e.category === currentCat) : inRegion).filter((e) => !words.length || matchesSearch(e, words));
-  const data = { region_counts: all.region_counts, events: picked.slice(0, 60) };
+  const data = { region_counts: all.region_counts, events: picked }; // 관심사 순서로 정렬한 뒤 60개로 자름 (아래)
   const s = window.__status;
   const today = new Date().toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
@@ -276,13 +284,17 @@ async function renderHome(useCache = false) {
   // 관심 지역: 그 지역 사건을 앞으로 (전체 보기일 때만)
   const favs = FAV || [];
   const favBar = $('#fav-bar');
-  favBar.innerHTML = storageOk ? `${favs.length ? `<span>⭐ ${esc(T.fav_note(favs.map((r) => T.regions[r]).join(', ')))}</span>` : ''}
-    <button class="link-btn" id="fav-edit">${esc(favs.length ? T.fav_change : T.fav_set)}</button>` : '';
+  const favCats = FAV_CATS;
+  const favNames = [...favs.map((r) => T.regions[r]), ...favCats.map((c) => T.cats[c])];
+  favBar.innerHTML = storageOk ? `${favNames.length ? `<span>⭐ ${esc(T.fav2_note(favNames.join(', ')))}</span>` : ''}
+    <button class="link-btn" id="fav-edit">${esc(favNames.length ? T.fav2_change : T.fav2_set)}</button>` : '';
   $('#fav-edit')?.addEventListener('click', () => showOnboarding());
-  if (!currentRegion && favs.length) {
-    const rank = (e) => (favs.includes(e.region) ? 0 : 1);
-    data.events = data.events.map((e, i) => [e, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(([e]) => e);
+  // 관심 지역·주제에 둘 다 맞는 사건 → 하나만 맞는 사건 → 나머지 (이미 그 지역·주제로 거르고 있으면 그 기준은 빼고)
+  const favScore = (e) => (!currentRegion && favs.includes(e.region) ? 1 : 0) + (!currentCat && favCats.includes(e.category) ? 1 : 0);
+  if (favs.length || favCats.length) {
+    data.events = data.events.map((e, i) => [e, i]).sort((x, y) => favScore(y[0]) - favScore(x[0]) || x[1] - y[1]).map(([e]) => e);
   }
+  data.events = data.events.slice(0, 60);
   const grid = $('#events');
   if (!data.events.length && words.length) {
     grid.innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(T.search_none(searchQ))}</div>`;
@@ -294,7 +306,7 @@ async function renderHome(useCache = false) {
       : `<div class="empty" style="grid-column:1/-1">${esc(T.empty_none)}</div>`;
     return;
   }
-  grid.innerHTML = data.events.map((e) => cardHtml(e, { fav: favs.includes(e.region) && !currentRegion })).join('')
+  grid.innerHTML = data.events.map((e) => cardHtml(e, { fav: favScore(e) > 0 })).join('')
     + (words.length ? '' : `<a class="archive-link" href="/archive">${esc(T.ar_more)}</a>`);
   // 처음 온 사람: 관심 지역 고르기
   // (?nolive 화면 캡처 모드에서는 &onboard가 있을 때만)
@@ -306,21 +318,32 @@ async function renderHome(useCache = false) {
 function showOnboarding() {
   document.querySelector('dialog.onboard')?.remove();
   const picked = new Set(FAV || []);
+  const pickedCats = new Set(FAV_CATS);
   const d = document.createElement('dialog');
   d.className = 'onboard';
   d.setAttribute('aria-labelledby', 'ob-title');
   const draw = () => {
-    d.innerHTML = `<h2 id="ob-title">${esc(T.ob_title)}</h2><p class="muted">${esc(T.ob_body)}</p>
+    d.innerHTML = `<h2 id="ob-title">${esc(T.ob2_title)}</h2><p class="muted">${esc(T.ob2_body)}</p>
+      <h3 class="ob-sec">${esc(T.ob2_regions)}</h3>
       <div class="ob-grid">${FAV_REGIONS.map((r) => `<button type="button" class="ob-chip" data-region="${r}" aria-pressed="${picked.has(r)}"><i></i>${esc(T.regions[r])}</button>`).join('')}</div>
+      <h3 class="ob-sec">${esc(T.ob2_cats)}</h3>
+      <div class="ob-grid cats">${FAV_CAT_KEYS.map((c) => `<button type="button" class="ob-chip" data-cat="${c}" aria-pressed="${pickedCats.has(c)}">${esc(T.cats[c])}</button>`).join('')}</div>
       <div class="ob-actions"><button type="button" class="btn" id="ob-skip">${esc(T.ob_skip)}</button>
-      <button type="button" class="btn primary" id="ob-go" ${picked.size ? '' : 'disabled'}>${esc(T.ob_start)}</button></div>`;
+      <button type="button" class="btn primary" id="ob-go" ${picked.size || pickedCats.size ? '' : 'disabled'}>${esc(T.ob2_start)}</button></div>`;
     d.querySelectorAll('.ob-chip').forEach((c) => c.addEventListener('click', () => {
-      picked.has(c.dataset.region) ? picked.delete(c.dataset.region) : picked.add(c.dataset.region);
+      const [set, key, attr] = c.dataset.cat ? [pickedCats, c.dataset.cat, 'data-cat'] : [picked, c.dataset.region, 'data-region'];
+      set.has(key) ? set.delete(key) : set.add(key);
+      const scroll = d.scrollTop;
       draw();
-      d.querySelector(`[data-region="${c.dataset.region}"]`).focus();
+      d.scrollTop = scroll;
+      d.querySelector(`[${attr}="${key}"]`).focus();
     }));
     d.querySelector('#ob-skip').onclick = () => { if (FAV === null) saveFav([]); d.close(); };
-    d.querySelector('#ob-go').onclick = () => { saveFav(FAV_REGIONS.filter((r) => picked.has(r))); d.close(); };
+    d.querySelector('#ob-go').onclick = () => {
+      saveFav(FAV_REGIONS.filter((r) => picked.has(r)));
+      saveFavCats(FAV_CAT_KEYS.filter((c) => pickedCats.has(c)));
+      d.close();
+    };
   };
   draw();
   d.addEventListener('cancel', () => { if (FAV === null) saveFav([]); });
