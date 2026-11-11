@@ -17,7 +17,7 @@ GitHub Actions (약 20분마다)                         Vercel
 
 - 모은 기사·번역·분석은 SQLite 파일(`data/`)에 쌓이고, GitHub Actions 캐시로 다음 실행에 이어져요. 3주가 지난 데이터는 갱신 때마다 지워요. 과거 뉴스 목록은 `data/archive/`에 날짜별로 굳혀 두어 6개월까지 남아요 (Vercel 무료 플랜의 파일 수·용량 한도 때문에 오래된 날은 가볍게).
 - `src/build.js`가 데이터베이스 내용을 `dist/data/...json` 파일로 만들어요.
-- Vercel 무료 플랜의 하루 배포 횟수 제한 때문에 20분 간격이에요 (`.github/workflows/update.yml`).
+- 20분 간격이에요 (`.github/workflows/update.yml`). GitHub 예약 실행은 몇십 분씩 밀려서, 갱신이 끝나면 시작 20분 뒤에 다음 갱신을 스스로 부르는 '사슬' 방식이에요. 사슬이 끊기면 3시간마다 도는 예비 예약이 다시 이어 붙여요. (Vercel 무료 플랜은 하루 배포 약 100번까지 → 20분 간격 = 72번)
 
 ## 주요 화면
 
