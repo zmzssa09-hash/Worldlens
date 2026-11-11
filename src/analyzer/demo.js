@@ -180,14 +180,23 @@ export function analyzeEvent(event, articles, lang = 'ko') {
   const L = T[lang];
   const title = (a) => a.t_title || a.title;
   const summary = (a) => (a.t_summary ?? a.summary) || '';
+  // 번역이 끝난 기사에서 문장을 가져옴 (가장 최근 기사는 아직 번역 전일 때가 많아 영어가 그대로 보이던 문제)
+  const done = (a) => lang === 'en' || a.t_title != null;
   const byOutlet = new Map();
-  for (const a of articles) if (!byOutlet.has(a.source_id)) byOutlet.set(a.source_id, a);
+  for (const a of articles) {
+    const cur = byOutlet.get(a.source_id);
+    if (!cur || (!done(cur) && done(a))) byOutlet.set(a.source_id, a); // 매체마다 첫 기사, 단 번역된 기사를 우선
+  }
   const firsts = [...byOutlet.values()];
-  const latest = articles[articles.length - 1];
+  const latest = [...articles].reverse().find((a) => done(a) && summary(a)) || articles[articles.length - 1];
   const rep = articles.find((a) => a.id === event.rep_article_id) || latest;
   const countries = [...new Set(articles.map((a) => countryName(a.country, lang)))];
   const start = new Date(articles[0].published_at).toLocaleDateString(LOCALE[lang], { month: 'long', day: 'numeric' });
-  const shown = firsts.slice(0, 8);
+  // 관점 카드 8개·확인된 사실 5개: 번역된 매체부터 (번역된 게 하나도 없을 때만 원문)
+  const translatedFirst = [...firsts.filter(done), ...firsts.filter((a) => !done(a))];
+  const shown = translatedFirst.slice(0, 8);
+  const factSrc = firsts.filter((a) => done(a) && summary(a));
+  const facts = (factSrc.length ? factSrc : firsts.filter((a) => summary(a))).slice(0, 5);
   const stances = guessStances(articles, shown.map((a) => a.source_id));
 
   return {
@@ -195,7 +204,7 @@ export function analyzeEvent(event, articles, lang = 'ko') {
     one_line: firstSentence(summary(latest) || title(latest)),
     where: null, // 데모: 화면에서 지역 이름으로 대신 보여 줌
     impact: guessImpact(articles, lang),
-    facts: firsts.slice(0, 5).filter((a) => summary(a)).map((a) => ({ text: firstSentence(summary(a)), sources: [a.source_id] })),
+    facts: facts.map((a) => ({ text: firstSentence(summary(a)), sources: [a.source_id] })),
     stance_target: '', // 데모: 대상을 알 수 없어 '다른 매체와 비교한 논조'로만 추정
     stance_guess: true, // 화면에 '추정' 표시
     perspectives: shown.map((a) => ({

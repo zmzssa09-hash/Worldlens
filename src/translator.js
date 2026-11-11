@@ -91,7 +91,8 @@ export async function translateTexts(texts, lang) {
 // 한 매체만 다룬 기사는 화면에 나오지 않으므로 번역하지 않음 → 번역 요청을 크게 줄임
 // 무료 번역은 한 번에 언어당 250건까지만: 한 번에 약 1,100건을 넘기면 막히는 것을 확인(2026-11-11) → 4개 언어 합계 1,000건 안쪽.
 // 막히면 30분 쉬고 다음 갱신 때 이어서.
-// WORLDLENS_TRANSLATE_LIMIT로 바꿀 수 있음. 사건 제목이 되는 대표 기사를 가장 먼저 번역
+// WORLDLENS_TRANSLATE_LIMIT로 바꿀 수 있음.
+// 순서: 사건 제목이 되는 대표 기사 → 사건마다 매체별 첫 기사(관점 카드·확인된 사실에 쓰임) → 큰 사건 → 최신
 const FREE_LIMIT = Number(process.env.WORLDLENS_TRANSLATE_LIMIT) || 250;
 export async function translateArticles(lang, { limit = USE_CLAUDE ? 800 : FREE_LIMIT } = {}) {
   const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
@@ -101,7 +102,9 @@ export async function translateArticles(lang, { limit = USE_CLAUDE ? 800 : FREE_
     WHERE i.article_id IS NULL`;
   const total = db.prepare(`SELECT count(*) n ${FROM}`).get(since, lang).n;
   const rows = db.prepare(`SELECT a.id, a.title, a.summary ${FROM}
-    ORDER BY (a.id = e.rep_article_id) DESC, e.country_count DESC, a.published_at DESC LIMIT ?`).all(since, lang, limit);
+    ORDER BY (a.id = e.rep_article_id) DESC,
+      (a.published_at = (SELECT min(b.published_at) FROM articles b WHERE b.event_id = a.event_id AND b.source_id = a.source_id)) DESC,
+      e.country_count DESC, a.published_at DESC LIMIT ?`).all(since, lang, limit);
   if (!rows.length) return { lang, translated: 0, remaining: 0 };
 
   // 수집하는 매체가 모두 영어판이라 영어는 원문을 그대로 사용
