@@ -3,6 +3,7 @@ import Parser from 'rss-parser';
 import { createHash } from 'node:crypto';
 import { SOURCES } from './sources.js';
 import { insertArticle, setMeta } from './db.js';
+import { cleanSummary } from './textclean.js';
 
 const parser = new Parser();
 
@@ -61,7 +62,7 @@ async function fetchSource(src) {
     const pub = new Date(item.isoDate || item.pubDate || fetchedAt);
     const publishedAt = isNaN(pub) ? fetchedAt : pub.toISOString();
     if (now - Date.parse(publishedAt) > MAX_AGE_MS) continue;
-    const summary = stripDateline(cleanText(item.contentSnippet || item.summary || item.content || '')).slice(0, 600);
+    const summary = cleanSummary(stripDateline(cleanText(item.contentSnippet || item.summary || item.content || ''))).slice(0, 600);
     // 같은 매체의 같은 제목은 한 번만 (URL이 달라도 재게시되는 경우가 있음)
     const id = createHash('sha1').update(`${src.id}|${title.toLowerCase()}`).digest('hex');
     const ok = insertArticle({

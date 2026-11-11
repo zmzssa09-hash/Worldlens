@@ -2,6 +2,7 @@
 // 실제 수집·번역한 기사를 규칙에 따라 정리할 뿐 'AI 해석'은 하지 않는다.
 // (가설·전망은 만들지 않고, 화면에 '데모' 표시가 붙는다)
 import { countryName } from '../sources.js';
+import { cleanSummary } from '../textclean.js';
 
 const LOCALE = { ko: 'ko-KR', en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -14,7 +15,7 @@ const T = {
     cause: '데모 모드에서는 가설을 만들지 않아요. AI 분석을 켜면 보도 내용을 근거로 "왜 이런 일이 일어났는지" 가설을 보여 드려요.',
     outlook: '데모 모드에서는 전망을 만들지 않아요. AI 분석을 켜면 "앞으로 어떻게 될지" 가설과 확신도를 보여 드려요.',
     background: (d, nc, no, na) => `이 사건은 ${d}부터 보도되기 시작했고, 지금까지 ${nc}개국 ${no}개 매체가 ${na}건을 보도했어요.`,
-    why: (c) => `${c} 등 여러 나라 언론이 함께 다룬 사건이에요.`,
+    why: (c, n) => `${c} 등 ${n}개국 언론이 다뤘어요. ${n >= 10 ? '지금 세계가 가장 주목하는 사건 중 하나예요.' : n >= 5 ? '여러 대륙에서 관심을 받고 있는 사건이에요.' : '관련된 나라들을 중심으로 보도되고 있어요.'}`,
     watch: 'AI 분석을 켜면 앞으로 지켜볼 점을 정리해 드려요.',
     join: ', ',
     headline: (n) => `오늘 세계에서 가장 많이 보도된 ${n}가지`,
@@ -29,7 +30,7 @@ const T = {
     cause: 'Demo mode does not generate hypotheses. With AI analysis on, you will see hypotheses on why this happened, based on the coverage.',
     outlook: 'Demo mode does not generate outlooks. With AI analysis on, you will see what may happen next, with a confidence level.',
     background: (d, nc, no, na) => `Coverage began on ${d}. So far ${no} outlets in ${nc} countries have published ${na} reports.`,
-    why: (c) => `An event covered by media in several countries, including ${c}.`,
+    why: (c, n) => `Covered by media in ${n} countries, including ${c}. ${n >= 10 ? 'One of the stories the world is watching most closely right now.' : n >= 5 ? 'It is drawing attention across several continents.' : 'Coverage is centred on the countries directly involved.'}`,
     watch: 'Turn on AI analysis to see what to watch next.',
     join: ', ',
     headline: (n) => `The ${n} most-covered stories in the world today`,
@@ -44,7 +45,7 @@ const T = {
     cause: 'デモモードでは仮説を作成しません。AI分析をオンにすると、報道内容をもとに「なぜ起きたのか」の仮説を表示します。',
     outlook: 'デモモードでは見通しを作成しません。AI分析をオンにすると、「今後どうなるか」の仮説と確信度を表示します。',
     background: (d, nc, no, na) => `この出来事は${d}から報じられ始め、これまでに${nc}か国の${no}メディアが${na}件報じています。`,
-    why: (c) => `${c}など、複数の国のメディアが報じた出来事です。`,
+    why: (c, n) => `${c}など${n}か国のメディアが報じています。${n >= 10 ? '今、世界で最も注目されている出来事の一つです。' : n >= 5 ? '複数の大陸で関心を集めている出来事です。' : '関係する国を中心に報じられています。'}`,
     watch: 'AI分析をオンにすると、今後注目すべき点をまとめます。',
     join: '、',
     headline: (n) => `今日、世界で最も報じられた${n}つの出来事`,
@@ -59,7 +60,7 @@ const T = {
     cause: '演示模式不生成假设。开启 AI 分析后，将根据报道内容给出“为什么会发生”的假设。',
     outlook: '演示模式不生成展望。开启 AI 分析后，将给出“接下来会怎样”的假设及可信度。',
     background: (d, nc, no, na) => `该事件自${d}起开始被报道，目前已有${nc}个国家的${no}家媒体发布了${na}篇报道。`,
-    why: (c) => `这是${c}等多个国家媒体共同关注的事件。`,
+    why: (c, n) => `${c}等${n}个国家的媒体进行了报道。${n >= 10 ? '这是当前全球最受关注的事件之一。' : n >= 5 ? '该事件正在多个大洲引起关注。' : '报道主要集中在相关国家。'}`,
     watch: '开启 AI 分析后，将整理接下来值得关注的要点。',
     join: '、',
     headline: (n) => `今日全球报道最多的${n}件大事`,
@@ -74,7 +75,7 @@ const T = {
     cause: 'Le mode démo ne génère pas d’hypothèses. Avec l’analyse IA, vous verrez des hypothèses sur les causes, fondées sur la couverture.',
     outlook: 'Le mode démo ne génère pas de perspectives. Avec l’analyse IA, vous verrez ce qui pourrait suivre, avec un niveau de confiance.',
     background: (d, nc, no, na) => `La couverture a commencé le ${d}. À ce jour, ${no} médias de ${nc} pays ont publié ${na} articles.`,
-    why: (c) => `Un événement couvert par des médias de plusieurs pays, dont ${c}.`,
+    why: (c, n) => `Couvert par des médias de ${n} pays, dont ${c}. ${n >= 10 ? 'C’est l’un des événements les plus suivis dans le monde en ce moment.' : n >= 5 ? 'Il suscite l’attention sur plusieurs continents.' : 'La couverture se concentre sur les pays directement concernés.'}`,
     watch: 'Activez l’analyse IA pour savoir quoi surveiller ensuite.',
     join: ', ',
     headline: (n) => `Les ${n} sujets les plus couverts dans le monde aujourd’hui`,
@@ -174,12 +175,14 @@ function firstSentence(text = '', max = 220) {
   const s = (m?.[0] || t).trim();
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
 }
+// 온전한 문장인지: 문장 부호로 끝나고, 잘리지 않았고, 너무 짧지 않음 (RSS 요약은 중간에 잘려 오는 경우가 많음)
+const complete = (s) => s.length >= 25 && !/(?:…|\.\.\.?)$/.test(s) && /[.!?。！？"”’」』)]$/.test(s);
 
 // articles: articlesForEvent(id, lang) 결과 (t_title/t_summary = 번역문)
 export function analyzeEvent(event, articles, lang = 'ko') {
   const L = T[lang];
   const title = (a) => a.t_title || a.title;
-  const summary = (a) => (a.t_summary ?? a.summary) || '';
+  const summary = (a) => cleanSummary((a.t_summary ?? a.summary) || ''); // 'WASHINGTON — ', 'Opinion:' 같은 머리·꼬리 걷어냄
   // 번역이 끝난 기사에서 문장을 가져옴 (가장 최근 기사는 아직 번역 전일 때가 많아 영어가 그대로 보이던 문제)
   const done = (a) => lang === 'en' || a.t_title != null;
   const byOutlet = new Map();
@@ -196,12 +199,26 @@ export function analyzeEvent(event, articles, lang = 'ko') {
   const translatedFirst = [...firsts.filter(done), ...firsts.filter((a) => !done(a))];
   const shown = translatedFirst.slice(0, 8);
   const factSrc = firsts.filter((a) => done(a) && summary(a));
-  const facts = (factSrc.length ? factSrc : firsts.filter((a) => summary(a))).slice(0, 5);
+  const factPool = factSrc.length ? factSrc : firsts.filter((a) => summary(a));
+  // 확인된 사실: 온전한 문장을 먼저, 모자라면 잘린 문장으로 채움
+  const facts = [...factPool.filter((a) => complete(firstSentence(summary(a)))), ...factPool.filter((a) => !complete(firstSentence(summary(a))))].slice(0, 5);
+  // 무엇이(한 줄 요약)·무슨 일이: 번역된 최신 기사부터 온전한 문장을 찾음
+  // 고르는 순서: 번역된 최신 기사의 온전한 문장 → (가장 먼저 번역되는) 사건 대표 제목 → 비워 둠
+  // 잘린 문장이나 번역 안 된 영어는 보여 주지 않음. 비어 있으면 화면이 '한눈에 보기'를 숨기고, 번역이 들어오면 다음 갱신 때 채워짐
+  const recent = [...articles].reverse();
+  const lineCands = recent.filter((a) => done(a) && summary(a));
+  const firstComplete = (cands, max) => {
+    for (const a of cands) { const s = firstSentence(summary(a), max); if (complete(s)) return s; }
+    return '';
+  };
+  const pickLine = (max) => firstComplete(lineCands, max) || (done(rep) ? title(rep) : '');
+  const oneLine = pickLine(220);
+  const whatHappened = pickLine(400);
   const stances = guessStances(articles, shown.map((a) => a.source_id));
 
   return {
     title: title(rep),
-    one_line: firstSentence(summary(latest) || title(latest)),
+    one_line: oneLine,
     where: null, // 데모: 화면에서 지역 이름으로 대신 보여 줌
     impact: guessImpact(articles, lang),
     facts: facts.map((a) => ({ text: firstSentence(summary(a)), sources: [a.source_id] })),
@@ -220,8 +237,8 @@ export function analyzeEvent(event, articles, lang = 'ko') {
     ],
     story: {
       background: L.background(start, countries.length, byOutlet.size, articles.length),
-      what_happened: firstSentence(summary(latest) || title(latest), 400),
-      why_it_matters: L.why(countries.slice(0, 6).join(L.join)),
+      what_happened: whatHappened,
+      why_it_matters: L.why(countries.slice(0, 4).join(L.join), countries.length),
       what_to_watch: L.watch,
     },
     keywords: [],

@@ -31,7 +31,8 @@ export function modeInfo() {
   return { mode: MODE, model: claude?.MODEL ?? null };
 }
 
-const recentEvents = (limit = 200) => listEvents({ sinceIso: new Date(Date.now() - WINDOW_MS).toISOString(), limit });
+// 홈에 보이는 사건이 200개를 넘으면서 뒤쪽 사건이 분석되지 않던 문제 → 500개까지 (AI 분석은 따로 한 번에 몇 건으로 제한됨)
+const recentEvents = (limit = 500) => listEvents({ sinceIso: new Date(Date.now() - WINDOW_MS).toISOString(), limit });
 
 function needsAnalysis(e) {
   // 'sample' = 직접 넣어 둔 예시 분석 → 자동 분석이 덮어쓰지 않음 (API 키를 넣으면 AI 분석으로 교체)

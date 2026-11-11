@@ -387,7 +387,8 @@ function glanceHtml(e, a) {
   if (!a.one_line) return '';
   const demo = e.analysis_mode === 'demo';
   const where = T.g_where_val(a.where || T.regions[e.region] || e.region, e.country_count);
-  const why = firstSentence(a.story?.why_it_matters || '');
+  // 데모는 짧은 두 문장(몇 개국이 보도 + 주목도)이라 그대로, AI 분석은 첫 문장만
+  const why = demo ? (a.story?.why_it_matters || '') : firstSentence(a.story?.why_it_matters || '');
   return `<div class="glance-row">
     <section class="glance" aria-labelledby="g-title"><h2 class="eyebrow" id="g-title">${esc(T.glance_title)}</h2>
       <dl><div><dt>${esc(T.g_what)}</dt><dd>${esc(a.one_line)}</dd></div>
@@ -443,7 +444,8 @@ const notYet = () => `<p class="muted">${esc(T.not_yet)}</p>`;
 function storyHtml(s) {
   if (!s) return notYet();
   const parts = [s.background, s.what_happened, s.why_it_matters, s.what_to_watch];
-  return `<div class="story">${parts.map((t, i) => `<section><h3>${esc(T.story[i])}</h3><p>${esc(t)}</p></section>`).join('')}</div>`;
+  // 빈 칸(아직 번역 전이라 비워 둔 '무슨 일이' 등)은 제목째 숨김
+  return `<div class="story">${parts.map((t, i) => (t ? `<section><h3>${esc(T.story[i])}</h3><p>${esc(t)}</p></section>` : '')).join('')}</div>`;
 }
 function factsHtml(facts) {
   if (!facts?.length) return notYet();

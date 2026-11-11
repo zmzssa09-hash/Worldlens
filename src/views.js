@@ -3,6 +3,7 @@ import { db, listEvents, getEvent, articlesForEvent, getAnalysis, getBriefing, g
 import { modeInfo, todayKey, localTitle } from './analyzer/index.js';
 import { SOURCES, SOURCE_BY_ID, LANGS, BASE_LANG, countryName, outletName } from './sources.js';
 import { guessCategory } from './category.js';
+import { cleanSummary } from './textclean.js';
 
 const parse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
 export const sinceHours = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
@@ -179,7 +180,7 @@ export function eventDetail(id, lang) {
     country: countryName(x.country, lang),
     state_media: !!x.state_media,
     title: x.t_title || x.title,
-    summary: x.t_summary ?? x.summary,
+    summary: cleanSummary(x.t_summary ?? x.summary),
     original_title: x.title,
     translated: !!x.t_title && lang !== 'en',
     url: x.url,
