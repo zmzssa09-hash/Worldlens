@@ -160,10 +160,16 @@ const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 
 
 // ── 홈 ──
 let currentRegion = '';
+let currentCat = '';
+const CAT_ORDER = ['politics', 'conflict', 'economy', 'tech', 'climate', 'health', 'society', 'culture', 'other'];
 const ORDER = ['asia', 'europe', 'middle-east', 'americas', 'africa', 'oceania', 'global'];
 async function renderHome() {
   const [briefing, all] = await Promise.all([api.briefing(), api.events()]);
-  const data = { region_counts: all.region_counts, events: (currentRegion ? all.events.filter((e) => e.region === currentRegion) : all.events).slice(0, 60) };
+  const inRegion = currentRegion ? all.events.filter((e) => e.region === currentRegion) : all.events;
+  const catCounts = {};
+  for (const e of inRegion) catCounts[e.category] = (catCounts[e.category] || 0) + 1;
+  if (currentCat && !catCounts[currentCat]) currentCat = '';
+  const data = { region_counts: all.region_counts, events: (currentCat ? inRegion.filter((e) => e.category === currentCat) : inRegion).slice(0, 60) };
   const s = window.__status;
   const today = new Date().toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
@@ -198,10 +204,16 @@ async function renderHome() {
     <div class="chips" role="group" aria-label="${esc(T.region_filter)}">
       <button class="chip" aria-pressed="${!currentRegion}" data-r="">${esc(T.all)} <span class="c">${total}</span></button>
       ${ORDER.filter((r) => counts[r]).map((r) => `<button class="chip" data-region="${r}" data-r="${r}" aria-pressed="${currentRegion === r}">${esc(T.regions[r])} <span class="c">${counts[r]}</span></button>`).join('')}
+    </div>
+    <div class="chips cat-chips" role="group" aria-label="${esc(T.cat_filter)}">
+      <span class="chips-label">${esc(T.cat_label)}</span>
+      <button class="chip cat" aria-pressed="${!currentCat}" data-c="">${esc(T.all)} <span class="c">${inRegion.length}</span></button>
+      ${CAT_ORDER.filter((c) => catCounts[c]).map((c) => `<button class="chip cat" data-cat="${c}" data-c="${c}" aria-pressed="${currentCat === c}">${esc(T.cats[c])} <span class="c">${catCounts[c]}</span></button>`).join('')}
     </div>` : '';
-  $('#world').querySelectorAll('.chip').forEach((c) => c.addEventListener('click', () => { currentRegion = c.dataset.r; renderHome(); }));
+  $('#world').querySelectorAll('.chip:not(.cat)').forEach((c) => c.addEventListener('click', () => { currentRegion = c.dataset.r; renderHome(); }));
+  $('#world').querySelectorAll('.chip.cat').forEach((c) => c.addEventListener('click', () => { currentCat = c.dataset.c; renderHome(); }));
 
-  $('#events-title').textContent = currentRegion ? T.events_region(T.regions[currentRegion]) : T.events_title;
+  $('#events-title').textContent = (currentRegion ? T.events_region(T.regions[currentRegion]) : T.events_title) + (currentCat ? ` · ${T.cats[currentCat]}` : '');
   $('#sort-note').textContent = T.sort_note;
   // 관심 지역: 그 지역 사건을 앞으로 (전체 보기일 때만)
   const favs = FAV || [];
@@ -222,7 +234,7 @@ async function renderHome() {
   }
   grid.innerHTML = data.events.map((e) => `
     <a class="card ${favs.includes(e.region) && !currentRegion ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}`)}">
-      <div class="card-top"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${heat(e.country_count)}</div>
+      <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e.country_count)}</div>
       <h3>${esc(e.title)}</h3>
       ${e.one_line && e.one_line !== e.title ? `<p>${esc(e.one_line)}</p>` : ''}
       <div class="countries">${pills(e.countries)}</div>
@@ -281,7 +293,7 @@ async function renderEvent() {
   main.innerHTML = `
     <div class="event-head">
       <a class="back" href="/">${esc(T.back)}</a><br>
-      <span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>
+      <span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? ` <span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}
       <h1>${esc(e.title)}</h1>
       <div class="stats">${heat(e.country_count)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${outlets}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span>${e.read_min ? `<span title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
       <div class="countries">${pills(e.countries, 20)}</div>

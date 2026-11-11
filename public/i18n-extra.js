@@ -21,6 +21,7 @@
       f_about: '서비스 소개', f_terms: '이용약관', f_privacy: '개인정보처리방침', f_refund: '환불 정책', f_contact: '문의하기',
       b_name: '상호', b_owner: '대표', b_reg: '사업자등록번호', b_mail: '통신판매업 신고', b_addr: '주소', b_pending: '사업자 정보 준비 중', contact_pending: '문의 이메일 준비 중',
       font_label: '글자 크기', font_sizes: ['보통', '크게', '아주 크게'],
+      cat_label: '주제', cat_filter: '주제 필터', cats: {'politics':'정치·외교','conflict':'분쟁·안보','economy':'경제','tech':'과학·기술','climate':'환경·재난','health':'건강','society':'사회','culture':'문화·스포츠','other':'기타'},
     },
     en: {
       q_eyebrow: '30-second summary', q_title: '3 things to know about the world today',
@@ -41,6 +42,7 @@
       f_about: 'About', f_terms: 'Terms of Service', f_privacy: 'Privacy Policy', f_refund: 'Refund Policy', f_contact: 'Contact',
       b_name: 'Business name', b_owner: 'Representative', b_reg: 'Business reg. no.', b_mail: 'Mail-order reg.', b_addr: 'Address', b_pending: 'Business details coming soon', contact_pending: 'contact email coming soon',
       font_label: 'Text size', font_sizes: ['Normal', 'Large', 'Extra large'],
+      cat_label: 'Topic', cat_filter: 'Topic filter', cats: {'politics':'Politics','conflict':'Conflict & security','economy':'Economy','tech':'Science & tech','climate':'Climate & disasters','health':'Health','society':'Society','culture':'Culture & sports','other':'Other'},
     },
     ja: {
       q_eyebrow: '30秒まとめ', q_title: '今日、世界で知っておきたい3つのこと',
@@ -61,6 +63,7 @@
       f_about: 'サービス紹介', f_terms: '利用規約', f_privacy: 'プライバシーポリシー', f_refund: '返金ポリシー', f_contact: 'お問い合わせ',
       b_name: '商号', b_owner: '代表者', b_reg: '事業者登録番号', b_mail: '通信販売業申告', b_addr: '所在地', b_pending: '事業者情報は準備中です', contact_pending: 'お問い合わせ先メールは準備中です',
       font_label: '文字サイズ', font_sizes: ['標準', '大きく', 'とても大きく'],
+      cat_label: 'テーマ', cat_filter: 'テーマで絞り込み', cats: {'politics':'政治・外交','conflict':'紛争・安全保障','economy':'経済','tech':'科学・技術','climate':'環境・災害','health':'健康','society':'社会','culture':'文化・スポーツ','other':'その他'},
     },
     zh: {
       q_eyebrow: '30秒速览', q_title: '今天必须知道的3件世界大事',
@@ -81,6 +84,7 @@
       f_about: '服务介绍', f_terms: '服务条款', f_privacy: '隐私政策', f_refund: '退款政策', f_contact: '联系我们',
       b_name: '商号', b_owner: '代表', b_reg: '营业执照号', b_mail: '通信销售业申报', b_addr: '地址', b_pending: '经营者信息准备中', contact_pending: '联系邮箱准备中',
       font_label: '字体大小', font_sizes: ['标准', '大', '特大'],
+      cat_label: '主题', cat_filter: '主题筛选', cats: {'politics':'政治·外交','conflict':'冲突·安全','economy':'经济','tech':'科技','climate':'环境·灾害','health':'健康','society':'社会','culture':'文化·体育','other':'其他'},
     },
     fr: {
       q_eyebrow: 'Résumé en 30 secondes', q_title: '3 choses à savoir sur le monde aujourd’hui',
@@ -101,6 +105,7 @@
       f_about: 'À propos', f_terms: 'Conditions d’utilisation', f_privacy: 'Confidentialité', f_refund: 'Remboursement', f_contact: 'Contact',
       b_name: 'Raison sociale', b_owner: 'Représentant', b_reg: 'N° d’entreprise', b_mail: 'Déclaration de vente à distance', b_addr: 'Adresse', b_pending: 'Informations légales à venir', contact_pending: 'adresse de contact à venir',
       font_label: 'Taille du texte', font_sizes: ['Normale', 'Grande', 'Très grande'],
+      cat_label: 'Thème', cat_filter: 'Filtre par thème', cats: {'politics':'Politique','conflict':'Conflits et sécurité','economy':'Économie','tech':'Sciences et tech','climate':'Climat et catastrophes','health':'Santé','society':'Société','culture':'Culture et sport','other':'Autres'},
     },
   };
   for (const [lang, strings] of Object.entries(X)) Object.assign(window.WL_I18N[lang], strings);

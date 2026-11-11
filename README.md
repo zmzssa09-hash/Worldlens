@@ -21,7 +21,7 @@ GitHub Actions (약 20분마다)                         Vercel
 
 ## 주요 화면
 
-- **오늘의 세계**: 30초 요약, 오늘의 브리핑, 지역별 사건 분포, 중요도·읽는 시간이 붙은 사건 카드, 관심 지역
+- **오늘의 세계**: 30초 요약, 오늘의 브리핑, 지역별 사건 분포, 주제별 거르기(정치·분쟁·경제·과학·환경·건강·사회·문화), 중요도·읽는 시간이 붙은 사건 카드, 관심 지역
 - **사건 상세**: 한눈에 보기, 나한테 무슨 상관?, 보도량 그래프, 3분 스토리, 확인된 사실, 나라별 관점(비판적 / 중립 / 우호적), 가설, 타임라인·원문
 - 글자 크기 조절, 다크 모드, 휴대폰 화면 대응, 이용약관·개인정보처리방침(초안)
 
@@ -65,6 +65,7 @@ GitHub 저장소 → **Settings → Secrets and variables → Actions**
 src/sources.js      수집하는 16개 매체와 언어·나라 이름
 src/collector.js    RSS 수집
 src/clusterer.js    기사를 사건으로 묶기
+src/category.js     사건 주제 나누기 (영어 원문 낱말 기준)
 src/translator.js   번역 (Claude 또는 무료 번역)
 src/analyzer/       분석 (claude.js: AI, demo.js: 규칙 기반, prompts.js: 중립성 원칙)
 src/pipeline.js     수집 → 묶기 → 번역 → 분석 → 브리핑 → 현지화

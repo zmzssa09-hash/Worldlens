@@ -2,6 +2,7 @@
 import { listEvents, getEvent, articlesForEvent, getAnalysis, getBriefing, getMeta, counts } from './db.js';
 import { modeInfo, todayKey, localTitle } from './analyzer/index.js';
 import { SOURCES, SOURCE_BY_ID, LANGS, BASE_LANG, countryName, outletName } from './sources.js';
+import { guessCategory } from './category.js';
 
 const parse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
 export const sinceHours = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
@@ -33,12 +34,14 @@ function readMinutes(data, lang) {
 
 export function eventCard(e, lang) {
   const a = analysisFor(e.id, lang);
-  const countries = [...new Set(articlesForEvent(e.id).map((x) => x.country))];
+  const arts = articlesForEvent(e.id);
+  const countries = [...new Set(arts.map((x) => x.country))];
   return {
     id: e.id,
     title: localTitle(e, lang),
     one_line: a?.lang === lang ? a.data?.one_line || null : null,
     region: e.region,
+    category: guessCategory(arts),
     article_count: e.article_count,
     outlet_count: e.outlet_count,
     country_count: e.country_count,
