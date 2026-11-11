@@ -180,7 +180,8 @@ export function eventDetail(id, lang) {
     country: countryName(x.country, lang),
     state_media: !!x.state_media,
     title: x.t_title || x.title,
-    summary: cleanSummary(x.t_summary ?? x.summary),
+    // 영어가 아닌 화면에는 번역된 요약만 (번역 전이면 비워 둠 — 제목은 먼저 번역됨)
+    summary: cleanSummary(lang === 'en' ? x.summary : x.t_summary),
     original_title: x.title,
     translated: !!x.t_title && lang !== 'en',
     url: x.url,

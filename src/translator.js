@@ -3,6 +3,7 @@
 // - 키가 없으면: 무료 Google 번역 주소를 천천히 사용. 공식 API가 아니라 요청이 많으면 한동안 막힘(429)
 //   → 한 번에 조금씩만 번역하고, 막히면 멈췄다가 다음 갱신(매시간) 때 이어서
 import { db, saveArticleTranslation } from './db.js';
+import { cleanSummary } from './textclean.js';
 
 const USE_CLAUDE = !!process.env.ANTHROPIC_API_KEY;
 const TRANSLATE_MODEL = process.env.WORLDLENS_TRANSLATE_MODEL || 'claude-haiku-5-5';
@@ -41,9 +42,13 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 export const translationEnabled = () => process.env.WORLDLENS_TRANSLATE !== 'off';
 
 let blockedUntil = 0; // 막혔으면 30분 동안은 무료 번역 요청을 보내지 않음
+let requestBudget = Infinity; // 이번 갱신에서 이 언어에 쓸 수 있는 남은 요청 횟수 (translateArticles가 정함)
+const BUDGET_MSG = '이번 갱신의 번역 요청 한도';
 
 async function translateRaw(text, lang) {
   if (Date.now() < blockedUntil) throw new Error('무료 번역이 잠시 막혀 있어요 (30분 뒤 다시 시도)');
+  if (requestBudget <= 0) throw new Error(`${BUDGET_MSG}를 다 썼어요`);
+  requestBudget--;
   const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${GT_CODE[lang]}&dt=t`;
   // 너무 자주 요청하면 429(요청 과다)로 막힘 → 20초, 60초 기다렸다가 다시 시도
   for (const wait of [0, 20000, 60000]) {
@@ -87,51 +92,86 @@ export async function translateTexts(texts, lang) {
   return out.map((t, k) => (clean[k] === '-' ? '' : t));
 }
 
-// 화면에 나오는 기사(여러 매체가 함께 보도한 사건의 기사) 중 아직 lang 번역이 없는 것을 번역해서 저장
+// 화면에 나오는 기사(여러 매체가 함께 보도한 사건의 기사)를 lang으로 번역해서 저장
 // 한 매체만 다룬 기사는 화면에 나오지 않으므로 번역하지 않음 → 번역 요청을 크게 줄임
-// 무료 번역은 한 번에 언어당 250건까지만: 한 번에 약 1,100건을 넘기면 막히는 것을 확인(2026-11-11) → 4개 언어 합계 1,000건 안쪽.
-// 막히면 30분 쉬고 다음 갱신 때 이어서.
-// WORLDLENS_TRANSLATE_LIMIT로 바꿀 수 있음.
+//
+// 무료 번역은 요청을 많이 보내면 막힘(한 번에 약 1,100건 = 요청 약 150번에서 막히는 것을 확인, 2026-11-11)
+// → 기사 수가 아니라 '요청 횟수'로 언어마다 REQ_PER_LANG번까지만 쓰고, 그 안에서
+//   1단계: 제목 전부 (짧아서 요청 한 번에 30개쯤 → 밀린 제목은 한 번의 갱신으로 거의 끝남)
+//   2단계: 남은 요청으로 요약 (화면에 쓰는 앞 두 문장, 300자까지만)
+// 제목만 번역된 기사는 article_i18n.summary가 NULL → 다음 갱신 때 요약을 이어서 번역
 // 순서: 사건 제목이 되는 대표 기사 → 사건마다 매체별 첫 기사(관점 카드·확인된 사실에 쓰임) → 큰 사건 → 최신
-const FREE_LIMIT = Number(process.env.WORLDLENS_TRANSLATE_LIMIT) || 250;
-export async function translateArticles(lang, { limit = USE_CLAUDE ? 800 : FREE_LIMIT } = {}) {
-  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-  const FROM = `FROM articles a
-    JOIN events e ON e.id = a.event_id AND e.outlet_count >= 2 AND e.last_updated >= ?
-    LEFT JOIN article_i18n i ON i.article_id = a.id AND i.lang = ?
-    WHERE i.article_id IS NULL`;
-  const total = db.prepare(`SELECT count(*) n ${FROM}`).get(since, lang).n;
-  const rows = db.prepare(`SELECT a.id, a.title, a.summary ${FROM}
-    ORDER BY (a.id = e.rep_article_id) DESC,
+const REQ_PER_LANG = Number(process.env.WORLDLENS_TRANSLATE_REQUESTS) || 30;
+const ORDER = `ORDER BY (a.id = e.rep_article_id) DESC,
       (a.published_at = (SELECT min(b.published_at) FROM articles b WHERE b.event_id = a.event_id AND b.source_id = a.source_id)) DESC,
-      e.country_count DESC, a.published_at DESC LIMIT ?`).all(since, lang, limit);
-  if (!rows.length) return { lang, translated: 0, remaining: 0 };
+      e.country_count DESC, a.published_at DESC`;
+const SHOWN = 'JOIN events e ON e.id = a.event_id AND e.outlet_count >= 2 AND e.last_updated >= ?';
+
+// 요약은 화면에 쓰는 만큼만: 머리·꼬리 걷고 앞 두 문장, 300자까지
+function shortSummary(text) {
+  const s = cleanSummary(text || '');
+  const m = s.match(/^(?:.{20,}?[.!?](?=\s|$)){1,2}/);
+  const out = (m?.[0] || s).trim();
+  return out.length > 300 ? out.slice(0, 300) : out;
+}
+
+export async function translateArticles(lang) {
+  const since = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+  const noRow = `FROM articles a ${SHOWN} LEFT JOIN article_i18n i ON i.article_id = a.id AND i.lang = ? WHERE i.article_id IS NULL`;
+  const noSummary = `FROM articles a ${SHOWN} JOIN article_i18n i ON i.article_id = a.id AND i.lang = ? WHERE i.summary IS NULL AND a.summary <> ''`;
+  const count = () => db.prepare(`SELECT count(*) n ${noRow}`).get(since, lang).n + db.prepare(`SELECT count(*) n ${noSummary}`).get(since, lang).n;
 
   // 수집하는 매체가 모두 영어판이라 영어는 원문을 그대로 사용
-  if (lang === 'en' || !translationEnabled()) {
-    if (lang !== 'en') return { lang, translated: 0, skipped: 'off' };
+  if (lang === 'en') {
+    const rows = db.prepare(`SELECT a.id, a.title, a.summary ${noRow}`).all(since, lang);
     for (const r of rows) saveArticleTranslation(r.id, 'en', r.title, r.summary || '');
-    return { lang, translated: rows.length };
+    return { lang, translated: rows.length, remaining: 0 };
+  }
+  if (!translationEnabled()) return { lang, translated: 0, skipped: 'off' };
+
+  // Claude 번역: 막히지 않으니 제목·요약을 함께 (한 번에 800건까지)
+  if (USE_CLAUDE) {
+    const rows = db.prepare(`SELECT a.id, a.title, a.summary ${noRow} ${ORDER} LIMIT 800`).all(since, lang);
+    let translated = 0;
+    for (let s = 0; s < rows.length; s += 50) {
+      const part = rows.slice(s, s + 50);
+      try {
+        const res = await translateTexts(part.flatMap((r) => [r.title, shortSummary(r.summary)]), lang);
+        part.forEach((r, k) => { if (res[k * 2]) { saveArticleTranslation(r.id, lang, res[k * 2], shortSummary(r.summary) ? res[k * 2 + 1] : ''); translated++; } });
+      } catch (e) { console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`); break; }
+    }
+    return { lang, translated, remaining: count() };
   }
 
-  let translated = 0;
-  // 50개씩 나눠서 번역·저장 (중간에 막혀도 그때까지 한 것은 남김)
-  for (let s = 0; s < rows.length; s += 50) {
-    const part = rows.slice(s, s + 50);
-    const texts = part.flatMap((r) => [r.title, r.summary || '']);
-    try {
-      const res = await translateTexts(texts, lang);
+  // 무료 번역: 요청 횟수 한도 안에서 제목 먼저, 그다음 요약
+  requestBudget = REQ_PER_LANG;
+  let titles = 0, summaries = 0;
+  try {
+    const rows = db.prepare(`SELECT a.id, a.title, a.summary ${noRow} ${ORDER} LIMIT 3000`).all(since, lang);
+    for (let s = 0; s < rows.length; s += 100) { // 100개씩 저장 (중간에 막혀도 그때까지 한 것은 남김)
+      const part = rows.slice(s, s + 100);
+      const res = await translateTexts(part.map((r) => r.title), lang);
       part.forEach((r, k) => {
-        const t = res[k * 2];
-        if (t) { saveArticleTranslation(r.id, lang, t, r.summary ? res[k * 2 + 1] : ''); translated++; }
+        if (!res[k]) return;
+        // 요약이 없는 기사는 ''(번역할 것 없음), 있으면 NULL(다음에 번역)
+        saveArticleTranslation(r.id, lang, res[k], shortSummary(r.summary) ? null : '');
+        titles++;
       });
-    } catch (e) {
-      // 막혀서 쉬는 중이면 5분마다 같은 경고를 반복하지 않음
-      if (!e.message.startsWith('무료 번역이 잠시')) console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`);
-      break;
     }
+    const srows = db.prepare(`SELECT a.id, a.summary ${noSummary} ${ORDER} LIMIT 3000`).all(since, lang);
+    const save = db.prepare('UPDATE article_i18n SET summary = ? WHERE article_id = ? AND lang = ?');
+    for (let s = 0; s < srows.length; s += 40) {
+      const part = srows.slice(s, s + 40);
+      const res = await translateTexts(part.map((r) => shortSummary(r.summary)), lang);
+      part.forEach((r, k) => { if (res[k]) { save.run(res[k], r.id, lang); summaries++; } });
+    }
+  } catch (e) {
+    // 이번 갱신의 요청 한도를 다 쓴 것은 정상. 막혀서 쉬는 중이면 같은 경고를 반복하지 않음
+    if (!e.message.startsWith(BUDGET_MSG) && !e.message.startsWith('무료 번역이 잠시')) console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`);
+  } finally {
+    requestBudget = Infinity;
   }
-  return { lang, translated, remaining: total - translated };
+  return { lang, translated: titles, summaries, remaining: count() };
 }
 
 // 분석 결과(JSON) 안의 글자만 골라 번역. skipKeys에 있는 필드(출처 id, 확신도 같은 코드값)는 그대로 둠

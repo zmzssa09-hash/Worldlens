@@ -182,7 +182,8 @@ const complete = (s) => s.length >= 25 && !/(?:…|\.\.\.?)$/.test(s) && /[.!?�
 export function analyzeEvent(event, articles, lang = 'ko') {
   const L = T[lang];
   const title = (a) => a.t_title || a.title;
-  const summary = (a) => cleanSummary((a.t_summary ?? a.summary) || ''); // 'WASHINGTON — ', 'Opinion:' 같은 머리·꼬리 걷어냄
+  // 번역된 요약만 씀 (제목만 먼저 번역된 기사는 요약이 아직 없음 → 영어 요약이 섞이지 않게). 머리·꼬리('WASHINGTON — ' 등)는 걷어냄
+  const summary = (a) => cleanSummary((lang === 'en' ? a.summary : a.t_summary) || '');
   // 번역이 끝난 기사에서 문장을 가져옴 (가장 최근 기사는 아직 번역 전일 때가 많아 영어가 그대로 보이던 문제)
   const done = (a) => lang === 'en' || a.t_title != null;
   const byOutlet = new Map();
