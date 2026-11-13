@@ -4,7 +4,8 @@
 import { countryName } from '../sources.js';
 import { cleanSummary } from '../textclean.js';
 import { guessCategory } from '../category.js';
-import { guessImpact, whyFor } from './impact.js';
+import { guessImpact } from './impact.js';
+import { buildStory } from './story.js';
 
 const LOCALE = { ko: 'ko-KR', en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -157,6 +158,7 @@ export function analyzeEvent(event, articles, lang = 'ko') {
   const oneLine = pickLine(220);
   const whatHappened = pickLine(400);
   const impact = guessImpact(articles, lang, guessCategory(articles));
+  const st = buildStory(event, articles, lang, impact.kind);
   const stances = guessStances(articles, shown.map((a) => a.source_id));
 
   return {
@@ -179,12 +181,12 @@ export function analyzeEvent(event, articles, lang = 'ko') {
       { kind: '원인', text: L.cause, basis: '', confidence: '낮음' },
       { kind: '전망', text: L.outlook, basis: '', confidence: '낮음' },
     ],
+    // 3분 스토리: 기사에서 짜낸 이야기 (story.js). 비면 예전 방식으로 채움
     story: {
-      background: L.background(start, countries.length, byOutlet.size, articles.length),
-      what_happened: whatHappened,
-      // 사건 유형이 왜 큰일인지 한 문장 + 몇 개국이 보도했는지
-      why_it_matters: [whyFor(impact.kind, lang), L.why(countries.slice(0, 4).join(L.join), countries.length)].filter(Boolean).join(' '),
-      what_to_watch: L.watch,
+      background: st.background || L.background(start, countries.length, byOutlet.size, articles.length),
+      what_happened: st.what_happened || whatHappened,
+      why_it_matters: [st.why || L.why(countries.slice(0, 4).join(L.join), countries.length), st.state].filter(Boolean).join('\n'),
+      what_to_watch: st.watch,
     },
     keywords: [],
   };

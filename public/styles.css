@@ -193,6 +193,7 @@ button.cd[aria-pressed="true"] i { color: inherit; opacity: .75; }
 .story h3 { font-size: 1.0625rem; display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
 .story h3::before { counter-increment: s; content: counter(s); width: 24px; height: 24px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-size: 0.8125rem; display: grid; place-items: center; font-family: var(--sans); }
 .story p { margin: 0; color: var(--ink-2); }
+.story p + p { margin-top: 10px; }
 
 .facts { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .facts li { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }

@@ -518,7 +518,9 @@ function storyHtml(s) {
   if (!s) return notYet();
   const parts = [s.background, s.what_happened, s.why_it_matters, s.what_to_watch];
   // 빈 칸(아직 번역 전이라 비워 둔 '무슨 일이' 등)은 제목째 숨김
-  return `<div class="story">${parts.map((t, i) => (t ? `<section><h3>${esc(T.story[i])}</h3><p>${esc(t)}</p></section>` : '')).join('')}</div>`;
+  // 문단은 줄바꿈으로 나뉘어 옴 (데모: '무슨 일이'는 매체별 문장 2~3개)
+  const paras = (t) => String(t).split('\n').filter((x) => x.trim()).map((x) => `<p>${esc(x)}</p>`).join('');
+  return `<div class="story">${parts.map((t, i) => (t ? `<section><h3>${esc(T.story[i])}</h3>${paras(t)}</section>` : '')).join('')}</div>`;
 }
 function factsHtml(facts) {
   if (!facts?.length) return notYet();
