@@ -3,7 +3,7 @@ import Parser from 'rss-parser';
 import { createHash } from 'node:crypto';
 import { SOURCES } from './sources.js';
 import { insertArticle, setMeta } from './db.js';
-import { cleanSummary } from './textclean.js';
+import { cleanSummary, shortTitle } from './textclean.js';
 
 const parser = new Parser();
 
@@ -56,7 +56,9 @@ async function fetchSource(src) {
   const fetchedAt = new Date(now).toISOString();
   let added = 0;
   for (const item of feed.items) {
-    const title = cleanText(item.title);
+    // 제목 칸에 본문 전체를 넣어 보내는 매체가 있음 → 첫 문장(최대 180자)만 제목으로
+    // (2026-11-13 본문 전체가 제목이 된 기사 하나가 사건 묶기를 망가뜨려 3,961건이 한 사건이 됐던 문제)
+    const title = shortTitle(cleanText(item.title));
     const url = normalizeUrl(item.link);
     if (!title || !/^https?:\/\//.test(url)) continue;
     const pub = new Date(item.isoDate || item.pubDate || fetchedAt);

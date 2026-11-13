@@ -42,3 +42,10 @@ export function cleanSummary(text = '') {
   s = s.trim();
   return NOT_SUMMARY.some((re) => re.test(s)) ? '' : s;
 }
+
+// 제목 칸에 본문 전체를 넣어 보내는 매체가 있음 → 첫 문장(최대 180자)만 제목으로
+export function shortTitle(t = '') {
+  if (t.length <= 180) return t;
+  const m = t.slice(0, 181).match(/^.{20,}?[.!?](?=\s)/);
+  return m ? m[0] : `${t.slice(0, 160).replace(/\s+\S*$/, '')}…`;
+}
