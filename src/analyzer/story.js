@@ -32,6 +32,8 @@ const L = {
     hot: (n) => `최근 6시간 동안 새 보도가 ${n}건 나왔어요. 아직 진행 중인 사건이니 새 소식을 지켜보세요.`,
     warm: (n) => `최근 하루 동안 새 보도가 ${n}건 있었어요. 관심이 이어지고 있어요.`,
     cool: (h) => `마지막 보도 뒤로 ${h}시간 넘게 새 소식이 없어, 관심이 잦아드는 중이에요.`,
+    recap2: (a, b) => `📌 지금까지: 처음엔 “${a}” 소식이었고, 최근에는 “${b}” 소식이 나왔어요.`,
+    recap1: (a) => `📌 지금까지: “${a}”`,
   },
   en: {
     span: (h) => (h < 24 ? `${Math.max(1, h)} hour${h > 1 ? 's' : ''}` : `${Math.round(h / 24)} day${Math.round(h / 24) > 1 ? 's' : ''}`),
@@ -47,6 +49,8 @@ const L = {
     hot: (n) => `${n} new report${n > 1 ? 's' : ''} in the last 6 hours: this story is still developing.`,
     warm: (n) => `${n} new report${n > 1 ? 's' : ''} in the last day: interest is holding.`,
     cool: (h) => `No new reports for over ${h} hours: attention is fading.`,
+    recap2: (a, b) => `📌 So far: it began with “${a}”, and the latest is “${b}”.`,
+    recap1: (a) => `📌 So far: “${a}”.`,
   },
   ja: {
     span: (h) => (h < 24 ? `${Math.max(1, h)}時間` : `${Math.round(h / 24)}日`),
@@ -62,6 +66,8 @@ const L = {
     hot: (n) => `直近6時間で新しい報道が${n}件ありました。まだ進行中の出来事なので、続報に注目しましょう。`,
     warm: (n) => `直近1日で新しい報道が${n}件ありました。関心が続いています。`,
     cool: (h) => `最後の報道から${h}時間以上新しいニュースがなく、関心が薄れつつあります。`,
+    recap2: (a, b) => `📌 これまで：「${a}」から始まり、最新では「${b}」となっています。`,
+    recap1: (a) => `📌 これまで：「${a}」`,
   },
   zh: {
     span: (h) => (h < 24 ? `${Math.max(1, h)}小时` : `${Math.round(h / 24)}天`),
@@ -77,6 +83,8 @@ const L = {
     hot: (n) => `过去6小时内有${n}篇新报道，事件仍在发展，请留意后续消息。`,
     warm: (n) => `过去一天内有${n}篇新报道，关注度仍在持续。`,
     cool: (h) => `距最后一篇报道已超过${h}小时没有新消息，关注度正在减退。`,
+    recap2: (a, b) => `📌 目前为止：从“${a}”开始，最新进展是“${b}”。`,
+    recap1: (a) => `📌 目前为止：“${a}”。`,
   },
   fr: {
     span: (h) => (h < 24 ? `${Math.max(1, h)} heure${h > 1 ? 's' : ''}` : `${Math.round(h / 24)} jour${Math.round(h / 24) > 1 ? 's' : ''}`),
@@ -92,6 +100,8 @@ const L = {
     hot: (n) => `${n} nouvel${n > 1 ? 's' : ''} article${n > 1 ? 's' : ''} ces 6 dernières heures : l’affaire est toujours en cours.`,
     warm: (n) => `${n} nouvel${n > 1 ? 's' : ''} article${n > 1 ? 's' : ''} ces dernières 24 heures : l’intérêt se maintient.`,
     cool: (h) => `Aucun nouvel article depuis plus de ${h} heures : l’attention retombe.`,
+    recap2: (a, b) => `📌 Jusqu’ici : tout a commencé par « ${a} », et le dernier développement est « ${b} ».`,
+    recap1: (a) => `📌 Jusqu’ici : « ${a} ».`,
   },
 };
 
@@ -217,7 +227,16 @@ export function buildStory(event, articles, lang, kind, now = Date.now()) {
   const in24 = sorted.filter((a) => now - ts(a) <= 24 * 3600e3).length;
   const sinceLast = Math.floor((now - ts(last)) / 3600e3);
   const momentum = in6 >= 2 ? S.hot(in6) : in24 >= 2 ? S.warm(in24) : sinceLast >= 12 ? S.cool(sinceLast) : '';
-  const watch = [WATCH[kind]?.[IDX[lang] ?? 1] || '', momentum].filter(Boolean).join('\n');
+  // 맨 위에 뉴스 흐름 요약: 처음 제목 → 최신 제목 (번역된 제목만, 둘이 거의 같으면 하나만)
+  const tdone = sorted.filter((x) => done(x) && title(x));
+  const cut = (t) => { t = cleanSummary(t); return t.length > 90 ? `${t.slice(0, 88).replace(/\s+\S*$/, '')}…` : t; };
+  let recap = '';
+  if (tdone.length) {
+    const a0 = tdone[0], a1 = tdone[tdone.length - 1];
+    const t0 = cut(title(a0)), t1 = cut(title(a1));
+    recap = a0 === a1 || similar(tokens(t0), tokens(t1)) > 0.6 ? S.recap1(t1) : S.recap2(t0, t1);
+  }
+  const watch = [recap, WATCH[kind]?.[IDX[lang] ?? 1] || '', momentum].filter(Boolean).join('\n');
 
   return { background: bg, what_happened: happened, why, state, watch };
 }
