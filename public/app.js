@@ -39,6 +39,11 @@ function saveFavCats(list) {
   FAV_CATS = list;
   try { localStorage.setItem('wl-cats', JSON.stringify(list)); } catch {}
 }
+// 따라가는 사건: { [id]: { n: 마지막으로 본 기사 수, t: 따라가기 시작한 시각 } } — 이 기기에만 저장
+let FOLLOW = {};
+try { const v = JSON.parse(localStorage.getItem('wl-follow') || '{}'); if (v && typeof v === 'object' && !Array.isArray(v)) FOLLOW = v; } catch {}
+function saveFollow() { try { localStorage.setItem('wl-follow', JSON.stringify(FOLLOW)); } catch {} }
+const isFollowing = (id) => Object.hasOwn(FOLLOW, String(id));
 
 // 첫 문장만 (한눈에 보기용)
 const firstSentence = (t = '') => (String(t).match(/^.{12,}?[.!?。！？](?=\s|$)|^.{12,}?[。！？]/)?.[0] || String(t)).trim();
@@ -238,6 +243,25 @@ async function renderHome(useCache = false) {
   const s = window.__status;
   const today = new Date().toLocaleDateString(LOCALE(), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
 
+  // 따라가는 사건: 새 보도가 붙은 것부터. 홈 목록에서 사라진 지 오래된 건 정리 (2주)
+  const fl = $('#following');
+  if (fl) {
+    const byId = new Map(all.events.map((e) => [String(e.id), e]));
+    let pruned = false;
+    for (const [id, v] of Object.entries(FOLLOW)) {
+      if (!byId.has(id) && Date.now() - (v.t || 0) > 14 * 86400e3) { delete FOLLOW[id]; pruned = true; }
+    }
+    if (pruned) saveFollow();
+    const list = Object.keys(FOLLOW).filter((id) => byId.has(id)).map((id) => {
+      const e = byId.get(id);
+      return { e, fresh: Math.max(0, e.article_count - (FOLLOW[id].n || 0)) };
+    }).sort((x, y) => (y.fresh > 0) - (x.fresh > 0) || Date.parse(y.e.last_updated) - Date.parse(x.e.last_updated));
+    fl.hidden = !list.length || words.length > 0;
+    fl.innerHTML = list.length ? `<div class="fl-head"><h2>★ ${esc(T.fl_title)}</h2><span class="muted">${esc(T.fl_note)}</span></div>
+      <ul class="fl-list">${list.map(({ e, fresh }) => `<li><a href="/event?id=${e.id}"><span class="t">${esc(e.title)}</span>
+        <span class="${fresh ? 'fl-new' : 'fl-same'}">${esc(fresh ? T.fl_new(fresh) : T.fl_same)}</span><span class="muted fl-ago">${esc(ago(e.last_updated))}</span></a></li>`).join('')}</ul>` : '';
+  }
+
   // 30초 요약: 브리핑 상위 3개를 한 줄씩
   const q = $('#quick');
   const top3 = (briefing?.items || []).slice(0, 3);
@@ -378,6 +402,10 @@ async function renderEvent() {
       <h1>${esc(e.title)}</h1>
       <div class="stats">${heat(e.country_count)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${outlets}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span>${e.read_min ? `<span title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
       <div class="countries">${pills(e.countries, 20)}</div>
+      <div class="ev-actions">
+        <button type="button" class="btn ev-btn" id="ev-follow" aria-pressed="${isFollowing(e.id)}" title="${esc(T.follow_title)}"><span aria-hidden="true">${isFollowing(e.id) ? '★' : '☆'}</span> ${esc(isFollowing(e.id) ? T.following : T.follow)}</button>
+        <button type="button" class="btn ev-btn" id="ev-share" title="${esc(T.share_title)}"><svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg> ${esc(T.share)}</button>
+      </div>
     </div>
     ${glanceHtml(e, a)}
     ${chartHtml(e.articles)}
@@ -390,6 +418,27 @@ async function renderEvent() {
     <div class="panel" data-panel="views">${viewsHtml(a)}</div>
     <div class="panel" data-panel="hypo">${hypoHtml(a.hypotheses)}</div>
     <div class="panel" data-panel="timeline">${timelineHtml(e.articles)}</div>`;
+
+  // 따라가는 사건이면: 이번에 본 기사 수를 기억 → 홈의 '새 보도 N건'이 사라짐
+  if (isFollowing(e.id) && FOLLOW[e.id].n !== e.article_count) { FOLLOW[e.id].n = e.article_count; saveFollow(); }
+  $('#ev-follow').addEventListener('click', (ev) => {
+    const on = !isFollowing(e.id);
+    if (on) FOLLOW[e.id] = { n: e.article_count, t: Date.now() }; else delete FOLLOW[e.id];
+    saveFollow();
+    ev.currentTarget.setAttribute('aria-pressed', on);
+    ev.currentTarget.innerHTML = `<span aria-hidden="true">${on ? '★' : '☆'}</span> ${esc(on ? T.following : T.follow)}`;
+    toast(on ? T.follow_on : T.follow_off);
+  });
+  // 공유: 휴대폰은 기본 공유 창(카카오톡 등), 컴퓨터는 링크 복사
+  // 공유 주소(/s/언어/번호)는 미리보기 카드(제목·요약·그림)가 붙는 페이지 → 열면 사건 화면으로 넘어감
+  $('#ev-share').addEventListener('click', async () => {
+    const url = `${location.origin}/s/${LANG}/${e.id}`;
+    const text = a.one_line && a.one_line !== e.title ? a.one_line : '';
+    if (navigator.share) {
+      try { await navigator.share({ title: e.title, text, url }); return; } catch (err) { if (err?.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(url); toast(T.share_copied); } catch { prompt(T.share_title, url); }
+  });
 
   const select = (key) => {
     currentTab = key;
@@ -410,8 +459,8 @@ function glanceHtml(e, a) {
   if (!a.one_line) return '';
   const demo = e.analysis_mode === 'demo';
   const where = T.g_where_val(a.where || T.regions[e.region] || e.region, e.country_count);
-  // 데모는 짧은 두 문장(몇 개국이 보도 + 주목도)이라 그대로, AI 분석은 첫 문장만
-  const why = demo ? (a.story?.why_it_matters || '') : firstSentence(a.story?.why_it_matters || '');
+  // 첫 문장만 (데모: 사건 유형이 왜 큰일인지. 몇 개국이 보도했는지는 '어디서'에 이미 있음)
+  const why = firstSentence(a.story?.why_it_matters || '');
   return `<div class="glance-row">
     <section class="glance" aria-labelledby="g-title"><h2 class="eyebrow" id="g-title">${esc(T.glance_title)}</h2>
       <dl><div><dt>${esc(T.g_what)}</dt><dd>${esc(a.one_line)}</dd></div>
@@ -651,6 +700,34 @@ function renderPage() {
   if (page === 'policy') return renderPolicy();
 }
 const STATIC_PAGES = ['about', 'policy'];
+
+// ── 앱처럼 설치 (홈 화면에 추가) ──
+// 서비스 워커: 인터넷이 끊겨도 마지막으로 본 화면을 보여 줌 (항상 새 것을 먼저 받음)
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+// 설치할 수 있는 브라우저(안드로이드 크롬·엣지 등)에서만 아래쪽에 '앱으로 설치' 버튼
+let installPrompt = null;
+addEventListener('beforeinstallprompt', (ev) => {
+  ev.preventDefault();
+  installPrompt = ev;
+  if (page !== 'home' || $('#install-app')) return; // 기사를 읽는 화면은 가리지 않게 홈에서만
+  const b = document.createElement('button');
+  b.id = 'install-app';
+  b.className = 'btn install-btn';
+  b.innerHTML = `<span aria-hidden="true">📲</span> ${esc(T.install)}`;
+  b.addEventListener('click', async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice.catch(() => ({}));
+    installPrompt = null;
+    b.remove();
+    if (outcome === 'accepted') toast(T.install_done);
+  });
+  document.body.append(b);
+});
+addEventListener('appinstalled', () => { $('#install-app')?.remove(); });
+
 (async () => {
   await watchStatus(); // 1분마다 새 데이터가 있는지 확인 → 있으면 화면을 다시 그림
   applyChrome();

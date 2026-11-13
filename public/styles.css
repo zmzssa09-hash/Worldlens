@@ -468,3 +468,26 @@ dialog.onboard .muted + .ob-sec { margin-top: 0; }
   :root:not([data-theme="light"]) .stance-group[data-stance="비판적"] { --sc: #f0936a; }
   :root:not([data-theme="light"]) .stance-group[data-stance="우호적"] { --sc: #7fcf9b; }
 }
+
+/* ── 사건 상세: 따라가기·공유 ── */
+.ev-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.ev-btn { display: inline-flex; align-items: center; gap: 6px; }
+.ev-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 700; }
+
+/* ── 홈: 따라가는 사건 ── */
+.following { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 18px; margin: 0 0 18px; box-shadow: var(--shadow); }
+.fl-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.fl-head h2 { font-size: 1rem; margin: 0; color: var(--accent); font-family: var(--sans); }
+.fl-head .muted { font-size: 0.78rem; }
+.fl-list { list-style: none; margin: 0; padding: 0; }
+.fl-list li + li { border-top: 1px solid var(--line); }
+.fl-list a { display: flex; align-items: center; gap: 10px; padding: 9px 0; color: inherit; text-decoration: none; }
+.fl-list a:hover .t { text-decoration: underline; }
+.fl-list .t { flex: 1; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fl-new { flex: none; background: var(--accent); color: #fff; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.fl-same { flex: none; color: var(--ink-3); font-size: 0.78rem; }
+.fl-ago { flex: none; font-size: 0.78rem; }
+@media (max-width: 560px) { .fl-ago { display: none; } }
+
+/* ── 앱으로 설치 버튼 ── */
+.install-btn { position: fixed; right: 16px; bottom: 16px; z-index: 40; box-shadow: var(--shadow); background: var(--surface); }

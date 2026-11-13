@@ -4,7 +4,7 @@
 import { countryName } from '../sources.js';
 import { cleanSummary } from '../textclean.js';
 import { guessCategory } from '../category.js';
-import { guessImpact } from './impact.js';
+import { guessImpact, whyFor } from './impact.js';
 
 const LOCALE = { ko: 'ko-KR', en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -182,7 +182,8 @@ export function analyzeEvent(event, articles, lang = 'ko') {
     story: {
       background: L.background(start, countries.length, byOutlet.size, articles.length),
       what_happened: whatHappened,
-      why_it_matters: L.why(countries.slice(0, 4).join(L.join), countries.length),
+      // 사건 유형이 왜 큰일인지 한 문장 + 몇 개국이 보도했는지
+      why_it_matters: [whyFor(impact.kind, lang), L.why(countries.slice(0, 4).join(L.join), countries.length)].filter(Boolean).join(' '),
       what_to_watch: L.watch,
     },
     keywords: [],

@@ -41,6 +41,33 @@ const write = (file, data) => {
 };
 const dateAgo = (n) => kstDate(Date.now() - n * 86400e3);
 
+// ── 공유용 페이지 (미리보기 카드) ──
+// 카카오톡·X·페이스북은 자바스크립트를 실행하지 않고 HTML의 og: 태그만 읽어서, 사건마다 작은 HTML을 따로 만듦
+const SITE = (process.env.WORLDLENS_SITE_URL || 'https://worldlens-three.vercel.app').replace(/\/$/, '');
+const COVERED = {
+  ko: (n) => `${n}개국 언론이 보도`, en: (n) => `Covered by media in ${n} countries`, ja: (n) => `${n}か国のメディアが報道`,
+  zh: (n) => `${n}个国家的媒体报道`, fr: (n) => `Couvert par des médias de ${n} pays`,
+};
+const attr = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function sharePage(d, lang) {
+  const target = `/event?id=${d.id}&lang=${lang}`;
+  const line = d.one_line && d.one_line !== d.title ? d.one_line : '';
+  const desc = [line, `${COVERED[lang](d.country_count)} · WorldLens`].filter(Boolean).join(' — ');
+  return `<!doctype html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${attr(d.title)} — WorldLens</title>
+<meta name="description" content="${attr(desc)}">
+<meta property="og:site_name" content="WorldLens"><meta property="og:type" content="article">
+<meta property="og:title" content="${attr(d.title)}"><meta property="og:description" content="${attr(desc)}">
+<meta property="og:url" content="${SITE}/s/${lang}/${d.id}"><meta property="og:image" content="${SITE}/og.png">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="${SITE}${attr(target)}">
+<meta http-equiv="refresh" content="0; url=${attr(target)}">
+<script>location.replace(${JSON.stringify(target)})</script>
+</head><body><p><a href="${attr(target)}">${attr(d.title)}</a></p></body></html>`;
+}
+const writeHtml = (file, html) => { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, html); };
+
 export function buildSite(outDir = DIST) {
   // 새 폴더에 다 만든 뒤 한 번에 바꿔치기 → 만드는 도중에 반쯤 빈 사이트가 보이지 않게
   const tmp = `${outDir}.tmp`;
@@ -63,7 +90,12 @@ export function buildSite(outDir = DIST) {
   for (const lang of LANGS) {
     write(join(tmp, 'data', lang, 'briefing.json'), briefingData(lang)); files++;
     write(join(tmp, 'data', lang, 'events.json'), eventsData(lang, events)); files++;
-    for (const id of fullIds) { write(join(tmp, 'data', lang, 'event', `${id}.json`), eventDetail(id, lang)); files++; }
+    for (const id of fullIds) {
+      const d = eventDetail(id, lang);
+      write(join(tmp, 'data', lang, 'event', `${id}.json`), d); files++;
+      // 공유 주소 /s/{언어}/{번호}: 카카오톡·X 등에 붙이면 미리보기 카드가 뜨고, 열면 사건 화면으로 넘어감
+      if (d) { writeHtml(join(tmp, 's', lang, `${id}.html`), sharePage(d, lang)); files++; }
+    }
 
     // 1) 데이터베이스에 남아 있는 날짜는 목록을 새로 만들어 굳혀 둠
     const cards = new Map();
