@@ -169,11 +169,11 @@ const pills = (countries, max = 6) => {
   const shown = countries.slice(0, max).map((c) => `<span class="pill">${esc(c.name)}</span>`).join('');
   return shown + (countries.length > max ? `<span class="pill">+${countries.length - max}</span>` : '');
 };
-// 중요도: 보도한 나라 수로 1~3단계
-// 매체가 86곳(55개국)으로 늘면서 예전 기준(6개국↑ 매우 중요)으로는 87개 사건이 다 '매우 중요'였음
-// → 15개국↑ 매우 중요(상위 5% 안팎), 7개국↑ 중요, 나머지 주목
-const heatLevel = (n) => (n >= 15 ? 3 : n >= 7 ? 2 : 1);
-const heat = (n) => { const l = heatLevel(n); return `<span class="heat h${l}" title="${esc(T.coverage_title(n))}"><span aria-hidden="true">${'🔥'.repeat(l)}</span> ${esc(T.heat[l - 1])}</span>`; };
+// 중요도 1~3단계: 서버가 '보도한 나라 수 × 사건 유형 가중치'로 계산해 넣어 줌 (e.importance)
+// (나라 수만 보면 영어권 매체가 함께 받는 연예·개인 사건이 '매우 중요'가 됐음)
+// 예전에 굳혀 둔 과거 뉴스 목록처럼 값이 없으면 나라 수로 대신
+const heatLevel = (e) => e.importance || (e.country_count >= 15 ? 3 : e.country_count >= 7 ? 2 : 1);
+const heat = (e) => { const l = heatLevel(e); return `<span class="heat h${l}" title="${esc(T.coverage_title(e.country_count))}"><span aria-hidden="true">${'🔥'.repeat(l)}</span> ${esc(T.heat[l - 1])}</span>`; };
 const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 필요 없음
 
 // 사건 카드 (홈·지난 사건 공용). dayMeta가 있으면 '그날' 보도 수를 보여 줌
@@ -181,7 +181,7 @@ function cardHtml(e, { fav = false, dayMeta = false, date = '' } = {}) {
   const meta = dayMeta && e.day_countries ? T.ar_day_meta(e.day_countries, e.day_articles) : T.card_meta(e.country_count, e.article_count);
   return `
     <a class="card ${fav ? 'fav' : ''}" href="${withLang(`/event?id=${e.id}${date ? `&d=${date}` : ''}`)}">
-      <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e.country_count)}</div>
+      <div class="card-top"><span class="tags"><span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? `<span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}</span>${heat(e)}</div>
       <h3>${esc(e.title)}</h3>
       ${e.one_line && e.one_line !== e.title ? `<p>${esc(e.one_line)}</p>` : ''}
       <div class="countries">${pills(e.countries)}</div>
@@ -402,7 +402,7 @@ async function renderEvent() {
       <a class="back" href="/">${esc(T.back)}</a><br>
       <span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? ` <span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''}
       <h1>${esc(e.title)}</h1>
-      <div class="stats">${heat(e.country_count)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${outlets}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span>${e.read_min ? `<span title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
+      <div class="stats">${heat(e)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${outlets}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span>${e.read_min ? `<span title="${esc(T.read_title)}">⏱ ${esc(T.read_min(e.read_min))}</span>` : ''}<span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
       <div class="countries">${pills(e.countries, 20)}</div>
       <div class="ev-actions">
         <button type="button" class="btn ev-btn" id="ev-follow" aria-pressed="${isFollowing(e.id)}" title="${esc(T.follow_title)}"><span aria-hidden="true">${isFollowing(e.id) ? '★' : '☆'}</span> ${esc(isFollowing(e.id) ? T.following : T.follow)}</button>
@@ -683,7 +683,7 @@ async function renderKeptEvent(id, date) {
       <a class="back" href="/archive?date=${esc(date)}">${esc(T.ar_back)}</a><br>
       <span class="region-tag" data-region="${esc(e.region)}">${esc(T.regions[e.region] || e.region)}</span>${e.category && T.cats[e.category] ? ` <span class="cat-tag">${esc(T.cats[e.category])}</span>` : ''} <span class="cat-tag">${esc(T.ar_kept)}</span>
       <h1>${esc(e.title)}</h1>
-      <div class="stats">${heat(e.country_count)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${e.outlet_count}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span><span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
+      <div class="stats">${heat(e)}<span><b>${e.country_count}</b>${esc(T.st_countries)}</span><span><b>${e.outlet_count}</b>${esc(T.st_outlets)}</span><span><b>${e.article_count}</b>${esc(T.st_articles)}</span><span>${esc(T.first_seen(fmtDay(e.first_seen)))}</span></div>
       <div class="countries">${pills(e.countries, 20)}</div>
     </div>
     ${e.one_line ? `<section class="glance kept"><h2 class="eyebrow">${esc(T.glance_title)}</h2><p>${esc(e.one_line)}</p></section>` : ''}

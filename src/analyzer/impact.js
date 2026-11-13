@@ -186,7 +186,7 @@ const S = [
     zh: ['俄罗斯和乌克兰是小麦、玉米、葵花籽油以及天然气和化肥的主要出口国。战争与谈判的走向会带动粮食和能源价格涨跌，进而影响面包、食用油等日常开支和取暖费用。', '一旦有停火或和谈消息，可以先看欧洲天然气和国际粮价的变化。'],
     fr: ['La Russie et l’Ukraine exportent beaucoup de blé, de maïs, d’huile de tournesol, de gaz et d’engrais. L’évolution de la guerre et des négociations fait bouger les prix des céréales et de l’énergie, et donc ceux du panier de courses et du chauffage.', 'En cas d’annonce de cessez-le-feu ou de paix, regardez d’abord le prix du gaz européen et des céréales.'],
   },  {
-    k: 'us', w: 0.8, re: /\b(trump|white house|congress|senate|pentagon|hegseth|biden|republicans?|democrats?|washington)\b/i,
+    k: 'us', w: 0.8, re: /\b(trump|white house|congress|senate|pentagon|hegseth|biden|republicans?|democrats?)\b/i, // 'washington'은 도시·주 이름이기도 해서 뺌
     ko: ['미국은 한국의 가장 큰 동맹이자 두 번째로 큰 수출 시장이에요. 미국 정부의 결정이 관세·방위비·환율로 이어지면 한국 경제와 안보에도 넓게 번져요. 다만 모든 미국 정치 소식이 그렇진 않아서, 실제 정책으로 이어지는지가 중요해요.', '관세·규제·예산 같은 실제 정책 변화로 이어지는지 후속 보도를 보세요.'],
     en: ['Decisions in Washington often spread abroad through tariffs, alliances and the dollar. Not every US political story does, though — what counts is whether it turns into actual policy.', 'Follow up on whether it leads to concrete changes in tariffs, regulation or spending.'],
     ja: ['米国政府の決定は、関税・同盟・ドルを通じて海外にも広がることがよくあります。ただ、すべての米政治ニュースがそうではなく、実際の政策につながるかが大切です。', '関税・規制・予算など、具体的な政策の変化につながるか続報を見ましょう。'],

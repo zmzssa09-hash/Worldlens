@@ -4,6 +4,29 @@ import { modeInfo, todayKey, localTitle } from './analyzer/index.js';
 import { SOURCES, SOURCE_BY_ID, LANGS, BASE_LANG, countryName, outletName } from './sources.js';
 import { guessCategory } from './category.js';
 import { cleanSummary } from './textclean.js';
+import { guessImpact } from './analyzer/impact.js';
+
+// ── 중요도 ──
+// 보도한 나라 수는 화제성일 뿐이라, 영어권 매체가 함께 받는 연예·개인 사건이 쉽게 15개국을 넘었음
+// → 나라 수 × 사건 유형 가중치. 전쟁·안보·경제·재난은 높게, 개인 재판·연예·스포츠는 낮게
+const KIND_WEIGHT = {
+  war: 1.2, mideast: 1.2, ukraine: 1.2, nkorea: 1.2,
+  cyber: 1.1, spy: 1.0, disaster: 1.1, health: 1.1, rates: 1.1, trade: 1.1, energy: 1.1, markets: 1.0, chips: 1.0,
+  us: 0.9, elections: 0.9, climate: 0.9, korea: 0.9, ai: 0.9, migration: 0.9,
+  company: 0.8, policy: 0.8, transport: 0.8, accident: 0.8, space: 0.8,
+  violence: 0.7, none: 0.7, religion: 0.6, arts: 0.5, sports: 0.5, court: 0.4,
+};
+const importanceCache = new Map();
+export function importanceOf(e) {
+  const key = `${e.id}:${e.article_count}:${e.country_count}`;
+  if (!importanceCache.has(key)) {
+    const arts = articlesForEvent(e.id);
+    const kind = guessImpact(arts, 'ko', guessCategory(arts)).kind;
+    const score = e.country_count * (KIND_WEIGHT[kind] ?? 0.7);
+    importanceCache.set(key, { kind, score, level: score >= 15 ? 3 : score >= 7 ? 2 : 1 });
+  }
+  return importanceCache.get(key);
+}
 
 const parse = (s, fallback) => { try { return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
 export const sinceHours = (h) => new Date(Date.now() - h * 3600 * 1000).toISOString();
@@ -44,6 +67,7 @@ export function eventCard(e, lang) {
     one_line: a?.lang === lang ? a.data?.one_line || null : null,
     region: e.region,
     category: guessCategory(arts),
+    importance: importanceOf(e).level, // 1 주목 · 2 중요 · 3 매우 중요
     article_count: e.article_count,
     outlet_count: e.outlet_count,
     country_count: e.country_count,
@@ -100,7 +124,7 @@ export function briefingData(lang) {
 }
 
 // 최근 48시간 사건 전부 (지역 거르기는 화면에서)
-// 순서: 보도한 나라 수 × 신선도. 12시간 안에 새 보도가 있으면 그대로, 그 뒤로는 서서히 낮춰 48시간이면 절반
+// 순서: 중요도 점수(나라 수 × 사건 유형 가중치) × 신선도. 12시간 안에 새 보도가 있으면 그대로, 그 뒤로는 서서히 낮춰 48시간이면 절반
 // (예전엔 나라 수만 봐서, 이틀 전에 끝난 사건이 방금 터진 사건보다 위에 남아 있었음)
 export function shownEvents() {
   const now = Date.now();
@@ -109,7 +133,7 @@ export function shownEvents() {
     return h <= 12 ? 1 : Math.max(0.5, 1 - (h - 12) / 72);
   };
   return listEvents({ sinceIso: sinceHours(48), limit: 500 })
-    .map((e) => [e, e.country_count * fresh(e)])
+    .map((e) => [e, importanceOf(e).score * fresh(e)])
     .sort((x, y) => y[1] - x[1] || y[0].article_count - x[0].article_count)
     .map(([e]) => e);
 }
