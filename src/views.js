@@ -100,8 +100,18 @@ export function briefingData(lang) {
 }
 
 // 최근 48시간 사건 전부 (지역 거르기는 화면에서)
+// 순서: 보도한 나라 수 × 신선도. 12시간 안에 새 보도가 있으면 그대로, 그 뒤로는 서서히 낮춰 48시간이면 절반
+// (예전엔 나라 수만 봐서, 이틀 전에 끝난 사건이 방금 터진 사건보다 위에 남아 있었음)
 export function shownEvents() {
-  return listEvents({ sinceIso: sinceHours(48), limit: 500 });
+  const now = Date.now();
+  const fresh = (e) => {
+    const h = (now - Date.parse(e.last_updated)) / 3600e3;
+    return h <= 12 ? 1 : Math.max(0.5, 1 - (h - 12) / 72);
+  };
+  return listEvents({ sinceIso: sinceHours(48), limit: 500 })
+    .map((e) => [e, e.country_count * fresh(e)])
+    .sort((x, y) => y[1] - x[1] || y[0].article_count - x[0].article_count)
+    .map(([e]) => e);
 }
 
 // ── 과거 뉴스 (날짜별) ──

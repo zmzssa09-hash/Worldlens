@@ -170,7 +170,9 @@ const pills = (countries, max = 6) => {
   return shown + (countries.length > max ? `<span class="pill">+${countries.length - max}</span>` : '');
 };
 // 중요도: 보도한 나라 수로 1~3단계
-const heatLevel = (n) => (n >= 6 ? 3 : n >= 4 ? 2 : 1);
+// 매체가 86곳(55개국)으로 늘면서 예전 기준(6개국↑ 매우 중요)으로는 87개 사건이 다 '매우 중요'였음
+// → 15개국↑ 매우 중요(상위 5% 안팎), 7개국↑ 중요, 나머지 주목
+const heatLevel = (n) => (n >= 15 ? 3 : n >= 7 ? 2 : 1);
 const heat = (n) => { const l = heatLevel(n); return `<span class="heat h${l}" title="${esc(T.coverage_title(n))}"><span aria-hidden="true">${'🔥'.repeat(l)}</span> ${esc(T.heat[l - 1])}</span>`; };
 const withLang = (href) => href; // 언어는 저장돼 있어 링크에 붙일 필요 없음
 
