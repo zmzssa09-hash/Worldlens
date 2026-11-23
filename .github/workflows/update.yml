@@ -80,6 +80,19 @@ jobs:
           key: worldlens-db-${{ github.run_id }}
           restore-keys: worldlens-db-
 
+      # 캐시가 지워졌거나 비어 있으면 하루 한 번 떠 둔 백업(아티팩트)에서 되살림
+      - name: 캐시가 없으면 백업에서 되살리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ -s data/worldlens.db ]; then echo "캐시에서 데이터를 불러왔어요"; exit 0; fi
+          id=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            | jq -r '[.artifacts[] | select(.expired | not) | select(.name | startswith("worldlens-backup-"))] | sort_by(.created_at) | last | .id // empty')
+          if [ -z "$id" ]; then echo "::warning::캐시도 백업도 없어 처음부터 모아요"; exit 0; fi
+          gh api "repos/$GITHUB_REPOSITORY/actions/artifacts/$id/zip" > /tmp/backup.zip
+          mkdir -p data && unzip -o -q /tmp/backup.zip -d /tmp/backup && tar -xzf /tmp/backup/data.tgz
+          echo "::warning::캐시가 없어서 백업(아티팩트 $id)에서 데이터를 되살렸어요"
+
       - name: 뉴스 갱신 + 사이트 만들기
         run: node --disable-warning=ExperimentalWarning src/refresh-cli.js
         env:
@@ -98,6 +111,43 @@ jobs:
           path: data
           key: worldlens-db-${{ github.run_id }}
 
+      # 캐시는 실행마다 새로 쌓임(하루 약 72개) → 최근 5개만 남기고 지움
+      - name: 오래된 캐시 정리
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh cache list -R "$GITHUB_REPOSITORY" --key worldlens-db- --sort created_at --order desc --limit 100 --json id \
+            | jq -r '.[5:][].id' | while read -r id; do gh cache delete "$id" -R "$GITHUB_REPOSITORY" >/dev/null && echo "지움: $id"; done
+
+      # 백업: 캐시 하나에만 데이터가 있으면 날아갈 때 전부 잃음 → 한국 날짜 기준 하루 한 번 아티팩트로 떠 둠 (30일 보관)
+      - name: 오늘 백업이 있는지 확인
+        id: backup
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          day=$(date +%Y%m%d)
+          n=$(gh api "repos/$GITHUB_REPOSITORY/actions/artifacts?name=worldlens-backup-$day" --jq '.total_count')
+          echo "day=$day" >> "$GITHUB_OUTPUT"
+          if [ "$n" != "0" ]; then echo "need=false" >> "$GITHUB_OUTPUT"; exit 0; fi
+          # 저장소가 공개라 아티팩트는 누구나 받을 수 있음 → 회원·결제 정보를 뺀 사본으로 백업
+          rm -rf /tmp/bk && mkdir -p /tmp/bk/data
+          node --disable-warning=ExperimentalWarning src/backup-cli.js /tmp/bk/data/worldlens.db
+          if [ -d data/archive ]; then cp -r data/archive /tmp/bk/data/; fi
+          tar -czf data.tgz -C /tmp/bk data
+          echo "need=true" >> "$GITHUB_OUTPUT"
+
+      - name: 하루 한 번 데이터 백업
+        if: success() && steps.backup.outputs.need == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: worldlens-backup-${{ steps.backup.outputs.day }}
+          path: data.tgz
+          retention-days: 30
+          compression-level: 0
+
       - name: Vercel에 올리기
         working-directory: dist
         run: |
@@ -107,11 +157,27 @@ jobs:
           fi
           # 파일 수천 개를 따로 올리면 무료 플랜의 '하루 업로드 5,000개' 제한에 걸림 (2026-11-11 갱신이 멈춘 원인)
           # → 하나로 묶어(tgz) 올림: 한 번 배포 = 업로드 1개
-          npx --yes vercel@latest deploy --prod --yes --archive=tgz --token "$VERCEL_TOKEN"
+          # 버전 고정: @latest면 Vercel이 동작을 바꿀 때 어느 날 갑자기 배포가 깨질 수 있음
+          npx --yes vercel@65.12.1 deploy --prod --yes --archive=tgz --token "$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      # 올리기 명령이 성공해도 실제 사이트가 새 데이터를 보여 주는지는 따로 확인
+      # 맞지 않으면 경고만 남김 (실패로 끝내면 GitHub가 메일을 보냄)
+      - name: 실제 사이트에 새 데이터가 올라갔는지 확인
+        continue-on-error: true
+        env:
+          SITE: ${{ vars.WORLDLENS_SITE_URL || 'https://worldlens-three.vercel.app' }}
+        run: |
+          want=$(jq -r '.last_refresh' dist/data/status.json)
+          for i in 1 2 3 4 5 6; do
+            got=$(curl -fsS "${SITE%/}/data/status.json?t=$(date +%s)" | jq -r '.last_refresh' || true)
+            if [ "$got" = "$want" ]; then echo "사이트에 새 데이터가 보여요 ($got)"; exit 0; fi
+            sleep 10
+          done
+          echo "::warning::사이트 데이터가 아직 예전 것이에요 (사이트: $got / 방금 만든 것: $want)"
 
       # 사슬: 시작 20분 뒤에 다음 갱신을 부름. 이번 갱신이 실패해도 사슬은 이어감.
       # 이미 기다리는 갱신이 있으면(직접 누른 실행·코드 올림) 부르지 않음 → 사슬이 둘로 갈라지지 않게
