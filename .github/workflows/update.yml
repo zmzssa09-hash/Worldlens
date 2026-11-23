@@ -13,15 +13,11 @@ name: 뉴스 갱신 및 배포
 on:
   schedule:
     - cron: '0 */3 * * *'    # 예비: 사슬이 끊겼을 때 다시 시작 (사슬이 살아 있으면 건너뜀)
-    - cron: '0 22 * * *'     # 한국 시간 아침 7시: 오늘의 브리핑 새로 만들기
+    # 아침 7시 브리핑은 따로 예약하지 않음: 7시가 지난 첫 갱신이 새로 만듦 (refresh-cli.js)
   workflow_dispatch:         # Actions 화면의 'Run workflow' 또는 사슬이 부름
   push:                      # 코드를 고쳐 올리면 바로 갱신 (끊긴 사슬도 이걸로 다시 시작됨)
     branches: [main]
     paths: ['src/**', 'public/**', 'package.json', 'package-lock.json', '.github/workflows/update.yml']
-
-concurrency:
-  group: worldlens-update
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -42,7 +38,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" != "schedule" ] || [ "${{ github.event.schedule }}" = "0 22 * * *" ]; then
+          if [ "${{ github.event_name }}" != "schedule" ]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
           recent=$(gh run list -R "$GITHUB_REPOSITORY" -w update.yml -L 20 --json databaseId,createdAt \
@@ -50,9 +46,15 @@ jobs:
           echo "최근 40분 안의 다른 갱신: $recent"
           if [ "$recent" -gt 0 ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
 
+  # 줄 세우기(concurrency)는 실제 갱신 작업에만: 예전엔 실행 전체에 걸려 있어서,
+  # 사슬이 살아 있을 때 예비 예약이 대기열에서 밀려 취소됨으로 끝나고 그때마다 GitHub가 메일을 보냈음
+  # → 이제 예비 예약은 gate에서 건너뜀으로 조용히 끝남
   update:
     needs: gate
     if: needs.gate.outputs.skip != 'true'
+    concurrency:
+      group: worldlens-update
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -79,7 +81,7 @@ jobs:
           restore-keys: worldlens-db-
 
       - name: 뉴스 갱신 + 사이트 만들기
-        run: node --disable-warning=ExperimentalWarning src/refresh-cli.js ${{ github.event.schedule == '0 22 * * *' && '--briefing' || '' }}
+        run: node --disable-warning=ExperimentalWarning src/refresh-cli.js
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           WORLDLENS_CONTACT_EMAIL: ${{ vars.WORLDLENS_CONTACT_EMAIL }}
