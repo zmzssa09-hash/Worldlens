@@ -1,11 +1,12 @@
 // 데모 분석기 — API 키가 없을 때 사용.
 // 실제 수집·번역한 기사를 규칙에 따라 정리할 뿐 'AI 해석'은 하지 않는다.
-// (가설·전망은 만들지 않고, 화면에 '데모' 표시가 붙는다)
+// (가설은 기사 속 원인·전망 문장으로 규칙에 따라 추정하고, 화면에 '데모' 표시가 붙는다)
 import { countryName } from '../sources.js';
 import { cleanSummary } from '../textclean.js';
 import { guessCategory } from '../category.js';
 import { guessImpact } from './impact.js';
 import { buildStory } from './story.js';
+import { buildHypotheses } from './hypo.js';
 
 const LOCALE = { ko: 'ko-KR', en: 'en-GB', ja: 'ja-JP', zh: 'zh-CN', fr: 'fr-FR' };
 
@@ -177,10 +178,8 @@ export function analyzeEvent(event, articles, lang = 'ko') {
       stance: stances[a.source_id],
     })),
     differences: L.differences(countries.join(L.join)),
-    hypotheses: [
-      { kind: '원인', text: L.cause, basis: '', confidence: '낮음' },
-      { kind: '전망', text: L.outlook, basis: '', confidence: '낮음' },
-    ],
+    // 가설: 기사에서 원인·전망 문장을 찾아 근거로 씀 (hypo.js). 확신도는 같은 내용을 전한 매체·나라 수로
+    hypotheses: buildHypotheses(articles, lang, impact.kind),
     // 3분 스토리: 기사에서 짜낸 이야기 (story.js). 비면 예전 방식으로 채움
     story: {
       background: st.background || L.background(start, countries.length, byOutlet.size, articles.length),
