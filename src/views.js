@@ -82,13 +82,27 @@ export function eventCard(e, lang) {
 }
 
 // 분석 안의 매체 id를 화면에 보일 이름으로 바꿔 줌
+// 문장 속 괄호의 매체 id → 매체 이름: '(cgtn)' → '(CGTN 중국국제TV)'. 괄호 안이 전부 매체 id일 때만 바꿈
+function idsToNamesFor(lang) {
+  return (t) => (typeof t !== 'string' ? t : t.replace(/\(([a-z0-9_]+(?:\s*,\s*[a-z0-9_]+)*)\)/g, (m, inner) => {
+    const ids = inner.split(/\s*,\s*/);
+    return ids.every((id) => SOURCE_BY_ID[id]) ? `(${ids.map((id) => outletName(id, lang)).join(', ')})` : m;
+  }));
+}
+
 function localizeAnalysis(data, lang) {
+  const idsToNames = idsToNamesFor(lang);
   if (!data) return null;
   const src = (id) => SOURCE_BY_ID[id];
   return {
     ...data,
     facts: (data.facts || []).map((f) => ({ ...f, sources: (f.sources || []).map((id) => outletName(id, lang)) })),
-    hypotheses: (data.hypotheses || []).map((h) => ({ ...h, sources: (h.sources || []).filter((id) => src(id)).map((id) => outletName(id, lang)) })),
+    hypotheses: (data.hypotheses || []).map((h) => ({
+      ...h,
+      sources: (h.sources || []).filter((id) => src(id)).map((id) => outletName(id, lang)),
+      clues: (h.clues || []).map(idsToNames),
+      counter: idsToNames(h.counter),
+    })),
     perspectives: (data.perspectives || []).filter((p) => src(p.source_id)).map((p) => ({
       ...p,
       outlet: outletName(p.source_id, lang),
