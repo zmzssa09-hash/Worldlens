@@ -9,13 +9,20 @@ import { getMeta, setMeta, noteAiError } from './db.js';
 // API 키 확인: 키가 틀렸으면(401·403) 이번 갱신은 키 없이(무료 번역 + 데모 분석) 돌림
 // → 틀린 키 때문에 번역·분석이 전부 멈추던 문제 (2026-11-25: invalid x-api-key로 번역이 쌓이기만 함)
 // AI 모드 여부는 모듈을 불러올 때 정해지므로, 확인을 먼저 하고 나머지는 그 뒤에 불러옴
+// 붙여 넣을 때 딸려 온 공백·줄바꿈·따옴표는 걷어냄 (Secrets에 키를 복사해 넣다 흔히 생김)
+if (process.env.ANTHROPIC_API_KEY) {
+  process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY.trim().replace(/^["'`]+|["'`]+$/g, '').trim();
+  if (!process.env.ANTHROPIC_API_KEY) delete process.env.ANTHROPIC_API_KEY;
+}
+// 키 모양: 앞 10글자('sk-ant-api' 등, 비밀 아님)와 길이만 남김 → 엉뚱한 값을 넣었는지 로그 없이 알 수 있게
+const keyShape = (k) => (k ? `${k.slice(0, 10)}… (${k.length}자)` : '없음');
 if (process.env.ANTHROPIC_API_KEY) {
   try {
     await new Anthropic().models.list({ limit: 1 });
     setMeta('last_ai_error', '');
   } catch (err) {
     if (err?.status === 401 || err?.status === 403) {
-      noteAiError('key-check', err);
+      noteAiError(`key-check · 키 모양 ${keyShape(process.env.ANTHROPIC_API_KEY)}`, err);
       console.warn(`[AI] API 키가 거절됐어요 (${err.status}). 이번 갱신은 무료 번역·데모 분석으로 돌려요.`);
       delete process.env.ANTHROPIC_API_KEY;
     } else {
