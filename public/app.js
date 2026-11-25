@@ -539,6 +539,17 @@ function viewsHtml(a) {
 function hypoHtml(hs) {
   if (!hs?.length) return notYet();
   const lv = { 낮음: 1, 중간: 2, 높음: 3 };
+  const conf = (c) => `<span class="conf">${esc(T.conf_label)} ${esc(T.conf[c] || c)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[c] || 1) ? 'on' : ''}"></i>`).join('')}</span>`;
+  // 새 구조: 가설 한 문장 + 기·승·전·결
+  if (hs[0]?.claim) {
+    const steps = [['setup', 0], ['develop', 1], ['turn', 2], ['conclusion', 3]];
+    return `<p class="hypo-note">${esc(T.hypo_note)}</p>
+    <div class="hypos">${hs.map((h, n) => `<article class="hypo story-hypo">
+      <header><span class="kind">${esc(T.hy_label(n + 1))}</span>${conf(h.confidence)}</header>
+      <h3 class="claim">${esc(h.claim)}</h3>
+      <ol class="hy-steps">${steps.filter(([k]) => h[k]).map(([k, i]) => `<li class="hy-${k}"><b>${esc(T.hy_steps[i])}</b><p>${esc(h[k])}</p></li>`).join('')}</ol>
+      ${h.sources?.length ? `<p class="basis">${esc(T.basis)} · ${h.sources.map(esc).join(', ')}</p>` : ''}</article>`).join('')}</div>`;
+  }
   return `<p class="hypo-note">${esc(T.hypo_note)}</p>
     <div class="hypos">${hs.map((h) => `<div class="hypo"><header><span class="kind">${esc(T.kind[h.kind] || h.kind)}</span>
       <span class="conf">${esc(T.conf_label)} ${esc(T.conf[h.confidence] || h.confidence)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[h.confidence] || 1) ? 'on' : ''}"></i>`).join('')}</span></header>

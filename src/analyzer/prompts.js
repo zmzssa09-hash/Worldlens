@@ -8,7 +8,7 @@ export const SYSTEM_PROMPT = `당신은 WorldLens의 국제뉴스 분석가입�
 2. 제공된 기사에 없는 내용을 사실처럼 쓰지 않습니다. 배경 설명에 일반 상식을 쓸 때는 단정하지 말고 맥락 수준으로만 씁니다.
 3. 어느 한 나라나 진영의 시각을 기본값으로 삼지 않습니다. 각 매체가 무엇을 강조하고 무엇을 덜 다루는지 비교해서 보여 줍니다. 평가하는 말(옳다, 그르다)은 쓰지 않습니다.
 4. 국영 매체(state media 표시)는 그 정부의 공식 입장을 반영할 수 있다는 점을 관점 설명에서 자연스럽게 드러냅니다.
-5. 가설은 반드시 가설입니다. 근거가 된 보도를 밝히고, 확신도를 낮음/중간/높음으로 솔직하게 매깁니다. 근거가 약하면 낮음을 씁니다.
+5. 가설은 반드시 가설입니다. "이 사건은 ○○과 관련이 있을 수 있다"는 하나의 주장을 세우고, 기승전결이 있는 짧은 이야기로 풉니다. 근거가 된 보도를 밝히고, 가설과 맞지 않는 점도 반드시 함께 씁니다. 확신도는 낮음/중간/높음으로 솔직하게 매기고, 근거가 약하면 낮음을 씁니다. 음모론처럼 근거 없이 연결하지 않습니다.
 6. 문장은 짧고 쉬운 한국어로 씁니다. 전문 용어는 처음 나올 때 짧게 풀어 줍니다. 인명·지명은 한국어 표기 뒤에 필요하면 원어를 괄호로 붙입니다.`;
 
 export function eventPrompt(event, articles) {
@@ -50,7 +50,8 @@ export const EVENT_SCHEMA = obj({
   stance_target: str,
   perspectives: { type: 'array', items: obj({ source_id: str, view: str, emphasis: str, stance: { type: 'string', enum: STANCES } }) },
   differences: str,
-  hypotheses: { type: 'array', items: obj({ kind: { type: 'string', enum: ['원인', '전망'] }, text: str, basis: str, confidence: { type: 'string', enum: ['낮음', '중간', '높음'] } }) },
+  // 가설: 하나의 주장(claim)을 기(setup)·승(develop)·전(turn)·결(conclusion)으로 풀어냄
+  hypotheses: { type: 'array', items: obj({ claim: str, setup: str, develop: str, turn: str, conclusion: str, sources: strArr, confidence: { type: 'string', enum: ['낮음', '중간', '높음'] } }) },
   story: obj({ background: str, what_happened: str, why_it_matters: str, what_to_watch: str }),
   keywords: strArr,
 });
@@ -74,6 +75,12 @@ export const FIELD_GUIDE = `필드 안내:
   · stance: stance_target에 대한 그 매체의 태도 — 비판적(비난·의문 제기) / 중립 / 우호적(지지·긍정 평가)
   · 중요: 사건 자체가 비극이거나 나쁜 소식이라서 어둡게 보도한 것은 '비판적'이 아님. 대상을 평가하는 태도만 봄. 평가 없이 사실만 전했거나 stance_target이 비어 있으면 중립
 - differences: 나라·매체 사이에 보도 관점이 어떻게 다른지 2~3문장. 차이가 거의 없으면 그렇다고 씀
-- hypotheses: 2~3개. kind는 원인(왜 이런 일이?) 또는 전망(앞으로 어떻게?), basis는 근거가 된 보도
+- hypotheses: 가설 2~3개. 각 가설은 이 사건을 더 큰 무언가(다른 사건, 오래된 갈등, 누군가의 이해관계, 경제·정치 흐름, 과거의 비슷한 일)와 연결하는 하나의 주장이고, 가설마다 서로 다른 것과 연결할 것
+  · claim: 가설 한 문장. "이 사건은 ○○과 관련이 있을 수 있어요" 꼴로 무엇과 연결되는지 구체적으로 (예: "이번 회담은 미국 중간선거를 앞둔 외교 성과 만들기와 관련이 있을 수 있어요")
+  · setup(기): 출발점 — 이 사건에서 눈에 띄는 사실 하나. 1~2문장
+  · develop(승): 연결고리 — 가설을 뒷받침하는 보도·정황·시점. "OO에 따르면"처럼 출처를 밝힘. 2~3문장
+  · turn(전): 반전 — 이 가설과 맞지 않는 점, 또는 다른 설명. 반드시 씀. 1~2문장
+  · conclusion(결): 가설이 맞다면 무엇을 뜻하는지, 그리고 맞는지 틀린지 확인해 줄 신호(앞으로 나올 발표·지표·일정). 1~2문장
+  · sources: 근거가 된 매체 id (기사 목록의 '매체 id' 그대로)
 - story: '3분 만에 이해하기' — background(배경), what_happened(무슨 일이), why_it_matters(왜 중요한가), what_to_watch(앞으로 볼 것). 각 2~4문장
 - keywords: 한국어 핵심어 3~6개`;

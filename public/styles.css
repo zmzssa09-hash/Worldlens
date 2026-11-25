@@ -218,6 +218,12 @@ button.cd[aria-pressed="true"] i { color: inherit; opacity: .75; }
 .conf { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--ink-2); }
 .conf i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: inline-block; margin-left: 2px; }
 .conf i.on { background: var(--ink-2); }
+/* 가설: 주장 한 줄 + 기·승·전·결 (전=반전은 다른 색으로 눈에 띄게) */
+.story-hypo .claim { font-size: 1.0625rem; line-height: 1.5; margin: 4px 0 12px; }
+.hy-steps { list-style: none; margin: 0; padding: 0 0 0 14px; border-left: 2px solid var(--line); display: grid; gap: 10px; }
+.hy-steps li b { display: block; font-size: 0.8125rem; color: var(--ink-3); margin-bottom: 2px; }
+.hy-steps li p { margin: 0; }
+.hy-steps .hy-turn b { color: var(--accent); }
 
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
 .timeline .day { font-weight: 700; font-size: 0.875rem; color: var(--ink-3); margin: 18px 0 8px; }

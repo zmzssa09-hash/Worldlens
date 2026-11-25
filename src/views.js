@@ -86,6 +86,7 @@ function localizeAnalysis(data, lang) {
   return {
     ...data,
     facts: (data.facts || []).map((f) => ({ ...f, sources: (f.sources || []).map((id) => outletName(id, lang)) })),
+    hypotheses: (data.hypotheses || []).map((h) => ({ ...h, sources: (h.sources || []).filter((id) => src(id)).map((id) => outletName(id, lang)) })),
     perspectives: (data.perspectives || []).filter((p) => src(p.source_id)).map((p) => ({
       ...p,
       outlet: outletName(p.source_id, lang),

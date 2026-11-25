@@ -1,9 +1,7 @@
-// 데모 가설 — AI 없이 기사에서 근거를 찾아 '왜 이런 일이?'와 '앞으로 어떻게?'를 추정
-// 1) 원인: 기사 문장 중 원인을 말하는 표현(~때문에, ~이후, after, amid …)이 들어간 문장
-// 2) 전망: 앞일을 말하는 표현(~할 예정, 전망, will, expected to …)이 들어간 문장
-// 3) 기사에서 못 찾으면: 같은 종류 사건의 일반적인 흐름 (근거에 '일반론'이라고 밝힘)
-// 확신도: 같은 내용을 여러 나라 여러 매체가 전하면 '중간', 아니면 '낮음'.
-//          규칙으로 고른 추정이라 '높음'은 주지 않음
+// 데모 가설 — AI 없이 "이 사건은 ○○과 관련이 있을 수 있다"는 주장 하나를 기승전결로 풂
+// 기: 첫 보도 / 승: 기사 속 원인·배경 문장(~때문에, amid …) / 전: 다른 설명의 여지 / 결: 기사 속 전망 문장(~할 예정, will …)
+// 주장과, 기사에서 근거를 못 찾은 칸은 사건 종류별 일반적인 흐름으로 채움
+// 확신도: 같은 내용을 여러 나라 여러 매체가 전하면 '중간', 아니면 '낮음'. 규칙으로 고른 추정이라 '높음'은 주지 않음
 import { outletName } from '../sources.js';
 import { cleanSummary } from '../textclean.js';
 
@@ -34,34 +32,49 @@ const STRONG_CAUSE = {
 
 const T = {
   ko: {
-    cause: (q) => `“${q}” 보도에서 원인·배경으로 꼽힌 대목이에요. 여기 담긴 사정이 이번 일의 계기였을 가능성이 있어요.`,
-    outlook: (q) => `보도는 앞으로의 움직임을 이렇게 전해요. “${q}” 실제로 그렇게 될지는 지켜봐야 해요.`,
-    basis: (o, n, nc) => (n > 1 ? `${o} 등 ${nc}개국 ${n}개 매체 보도` : `${o} 보도`),
-    general: '같은 종류 사건의 일반적인 흐름 (이 사건 보도에서 직접 확인한 내용은 아님)',
+    setup: (t) => `이 사건의 출발점은 이 보도예요. “${t}”`,
+    develop: (q, b) => `${b}에 따르면 “${q}” 보도에서 원인·배경으로 꼽힌 대목이 이 가설과 이어져요.`,
+    noDevelop: '아직 보도에서 원인이나 배경을 직접 꼽은 문장은 찾지 못했어요. 그래서 같은 종류 사건의 일반적인 흐름에 기대고 있어요.',
+    turn: '다만 이건 같은 종류 사건에서 흔히 보이는 흐름에서 끌어낸 추정이에요. 우발적인 일이거나, 이번 사건만의 다른 사정 때문일 수도 있어요.',
+    conclusionEv: (q, b) => `가설이 맞다면 다음 흐름이 이어질 거예요. ${b} 보도에 따르면 “${q}” 이게 실제로 일어나는지가 확인해 줄 신호예요.`,
+    conclusionGen: (g) => `가설이 맞다면, ${g} 이런 흐름이 실제로 나타나는지 지켜보면 돼요.`,
+    basis: (o, n, nc) => (n > 1 ? `${o} 등 ${nc}개국 ${n}개 매체` : o),
   },
   en: {
-    cause: (q) => `“${q}” Coverage points to this as the background. The circumstances described here may have set things off.`,
-    outlook: (q) => `Reports describe what comes next: “${q}” Whether it actually happens remains to be seen.`,
-    basis: (o, n, nc) => (n > 1 ? `Reported by ${o} and ${n - 1} other outlet${n > 2 ? 's' : ''} in ${nc} countr${nc > 1 ? 'ies' : 'y'}` : `Reported by ${o}`),
-    general: 'The usual pattern for events of this kind (not directly confirmed in coverage of this event)',
+    setup: (t) => `The starting point is this report: “${t}”`,
+    develop: (q, b) => `According to ${b}, “${q}” The background named in the coverage links to this hypothesis.`,
+    noDevelop: 'No sentence in the coverage names a cause or background yet, so this rests on the usual pattern for events of this kind.',
+    turn: 'But this is drawn from the usual pattern for similar events. It could be accidental, or due to circumstances specific to this case.',
+    conclusionEv: (q, b) => `If the hypothesis holds, this should follow. ${b} reports: “${q}” Whether it actually happens is the signal to watch.`,
+    conclusionGen: (g) => `If the hypothesis holds: ${g} Watch whether this pattern actually appears.`,
+    basis: (o, n, nc) => (n > 1 ? `${o} and ${n - 1} other outlet${n > 2 ? 's' : ''} in ${nc} countr${nc > 1 ? 'ies' : 'y'}` : o),
   },
   ja: {
-    cause: (q) => `「${q}」報道で原因・背景として挙げられた部分です。ここにある事情が今回のきっかけだった可能性があります。`,
-    outlook: (q) => `報道は今後の動きをこう伝えています。「${q}」実際にそうなるかは見守る必要があります。`,
-    basis: (o, n, nc) => (n > 1 ? `${o}など${nc}か国${n}メディアの報道` : `${o}の報道`),
-    general: '同じ種類の出来事によくある流れ（この出来事の報道で直接確認した内容ではありません）',
+    setup: (t) => `この出来事の出発点はこの報道です。「${t}」`,
+    develop: (q, b) => `${b}によると「${q}」報道で原因・背景として挙げられた部分がこの仮説につながります。`,
+    noDevelop: 'まだ報道の中に原因や背景を直接挙げた文は見つかっていません。そのため、同じ種類の出来事によくある流れに頼っています。',
+    turn: 'ただし、これは同じ種類の出来事によくある流れから導いた推定です。偶発的な出来事だったり、今回ならではの別の事情によるものだったりする可能性もあります。',
+    conclusionEv: (q, b) => `仮説が正しければ、次の流れが続くはずです。${b}はこう伝えています。「${q}」これが実際に起きるかどうかが確かめる手がかりです。`,
+    conclusionGen: (g) => `仮説が正しければ、${g} こうした流れが実際に現れるか見守りましょう。`,
+    basis: (o, n, nc) => (n > 1 ? `${o}など${nc}か国${n}メディア` : o),
   },
   zh: {
-    cause: (q) => `“${q}”这是报道中提到的原因或背景。其中描述的情况可能是此事的起因。`,
-    outlook: (q) => `报道这样描述接下来的动向：“${q}”实际是否如此仍有待观察。`,
-    basis: (o, n, nc) => (n > 1 ? `${o}等${nc}个国家${n}家媒体的报道` : `${o}的报道`),
-    general: '同类事件的一般走向（并非本事件报道中直接确认的内容）',
+    setup: (t) => `此事的起点是这篇报道：“${t}”`,
+    develop: (q, b) => `据${b}报道，“${q}”报道中提到的原因或背景与这一假设相关联。`,
+    noDevelop: '报道中尚未找到直接指出原因或背景的句子，因此这一假设依据的是同类事件的一般走向。',
+    turn: '不过，这是根据同类事件的常见走向得出的推断。也可能是偶发事件，或出于此事特有的其他原因。',
+    conclusionEv: (q, b) => `如果假设成立，接下来应会出现这样的发展。${b}报道称：“${q}”这是否真的发生，就是验证的信号。`,
+    conclusionGen: (g) => `如果假设成立，${g}可以留意这种走向是否真的出现。`,
+    basis: (o, n, nc) => (n > 1 ? `${o}等${nc}个国家${n}家媒体` : o),
   },
   fr: {
-    cause: (q) => `« ${q} » La couverture présente cela comme le contexte. Les circonstances décrites ici ont pu servir de déclencheur.`,
-    outlook: (q) => `Les médias décrivent la suite ainsi : « ${q} » Reste à voir si cela se confirmera.`,
-    basis: (o, n, nc) => (n > 1 ? `${o} et ${n - 1} autre${n > 2 ? 's' : ''} média${n > 2 ? 's' : ''} dans ${nc} pays` : `Rapporté par ${o}`),
-    general: 'L’évolution habituelle pour ce type d’événement (non confirmée directement dans la couverture)',
+    setup: (t) => `Le point de départ est cet article : « ${t} »`,
+    develop: (q, b) => `Selon ${b}, « ${q} » Le contexte cité dans la couverture rejoint cette hypothèse.`,
+    noDevelop: 'Aucune phrase de la couverture n’indique encore de cause ou de contexte ; l’hypothèse repose donc sur l’évolution habituelle de ce type d’événement.',
+    turn: 'Mais cela découle de l’évolution habituelle d’événements similaires. Il peut s’agir d’un hasard, ou de circonstances propres à cette affaire.',
+    conclusionEv: (q, b) => `Si l’hypothèse se vérifie, la suite devrait être celle-ci. ${b} rapporte : « ${q} » Que cela se produise ou non sera le signal à suivre.`,
+    conclusionGen: (g) => `Si l’hypothèse se vérifie : ${g} Reste à voir si cette évolution se produit.`,
+    basis: (o, n, nc) => (n > 1 ? `${o} et ${n - 1} autre${n > 2 ? 's' : ''} média${n > 2 ? 's' : ''} dans ${nc} pays` : o),
   },
 };
 
@@ -160,7 +173,8 @@ function pickEvidence(cands, avoid) {
   return best;
 }
 
-// articles: articlesForEvent(id, lang) 결과 / kind: impact.js의 사건 종류
+// 데모 가설 하나: 주장(claim) + 기(출발점)·승(연결고리)·전(반전)·결(결론)
+// 주장은 사건 종류별 일반적인 원인, 승·결은 기사에서 찾은 원인·전망 문장으로 채움
 export function buildHypotheses(articles, lang, kind) {
   const L = T[lang] || T.en;
   const done = (a) => lang === 'en' || a.t_title != null;
@@ -179,26 +193,24 @@ export function buildHypotheses(articles, lang, kind) {
   for (const x of sents) for (const w of x.g) df.set(w, (df.get(w) || 0) + 1);
   const common = Math.max(3, sents.length * 0.3);
   for (const x of sents) x.d = new Set([...x.g].filter((w) => df.get(w) <= common));
-  const make = (kindKo, ev, tpl) => {
-    const q = ev.s.replace(/[“”"]/g, '').replace(/[.。]$/, CJK(lang) ? '' : '.');
-    const n = ev.outlets.size, nc = ev.countries.size;
-    return {
-      kind: kindKo,
-      text: tpl(q),
-      basis: L.basis(outletName(ev.source_id, lang), n, nc),
-      confidence: n >= 3 && nc >= 2 ? '중간' : '낮음',
-    };
-  };
-  const out = [];
+
+  const quote = (ev) => ev.s.replace(/[“”"「」«»]/g, '').replace(/[.。]$/, CJK(lang) ? '' : '.');
+  const who = (ev) => L.basis(outletName(ev.source_id, lang), ev.outlets.size, ev.countries.size);
   const causeCands = sents.filter((x) => CAUSE[lang]?.test(x.s) && !NOT_CAUSE[lang]?.test(x.s));
   const strong = causeCands.filter((x) => STRONG_CAUSE[lang]?.test(x.s));
   const cause = pickEvidence(strong.length ? strong : causeCands);
   const outlook = pickEvidence(sents.filter((x) => OUTLOOK[lang]?.test(x.s) && !NOT_OUTLOOK.test(x.s)), cause?.g);
   const fam = GENERAL[FAMILY[kind]] || GENERAL.politics;
   const i = IDX[lang] ?? 1;
-  out.push(cause ? make('원인', cause, L.cause) : { kind: '원인', text: fam[0][i], basis: L.general, confidence: '낮음' });
-  if (outlook) out.push(make('전망', outlook, L.outlook));
-  // 일반적인 흐름의 전망은 늘 붙임 (기사 근거 전망과 함께 보면 '보통은 이렇게 흘러간다'를 알 수 있음)
-  out.push({ kind: '전망', text: fam[1][i], basis: L.general, confidence: '낮음' });
-  return out;
+  const first = articles.find(done);
+  const sources = [...new Set([cause?.source_id, outlook?.source_id].filter(Boolean))];
+  return [{
+    claim: fam[0][i],
+    setup: first ? L.setup(first.t_title || first.title) : '',
+    develop: cause ? L.develop(quote(cause), who(cause)) : L.noDevelop,
+    turn: L.turn,
+    conclusion: outlook ? L.conclusionEv(quote(outlook), who(outlook)) : L.conclusionGen(fam[1][i]),
+    sources,
+    confidence: cause && cause.outlets.size >= 3 && cause.countries.size >= 2 ? '중간' : '낮음',
+  }];
 }
