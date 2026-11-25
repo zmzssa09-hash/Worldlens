@@ -138,7 +138,7 @@ export async function translateArticles(lang) {
       try {
         const res = await translateTexts(part.flatMap((r) => [r.title, shortSummary(r.summary)]), lang);
         part.forEach((r, k) => { if (res[k * 2]) { saveArticleTranslation(r.id, lang, res[k * 2], shortSummary(r.summary) ? res[k * 2 + 1] : ''); translated++; } });
-      } catch (e) { console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`); if (process.env.ANTHROPIC_API_KEY) noteAiError(`translate:${lang}`, e); break; }
+      } catch (e) { console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`); if (USE_CLAUDE) noteAiError(`translate:${lang}`, e); break; }
     }
     return { lang, translated, remaining: count() };
   }
@@ -169,7 +169,7 @@ export async function translateArticles(lang) {
     // 이번 갱신의 요청 한도를 다 쓴 것은 정상. 막혀서 쉬는 중이면 같은 경고를 반복하지 않음
     if (!e.message.startsWith(BUDGET_MSG) && !e.message.startsWith('무료 번역이 잠시')) {
       console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`);
-      if (process.env.ANTHROPIC_API_KEY) noteAiError(`translate:${lang}`, e);
+      if (USE_CLAUDE) noteAiError(`translate:${lang}`, e);
     }
   } finally {
     requestBudget = Infinity;

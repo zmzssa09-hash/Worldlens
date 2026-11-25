@@ -2,6 +2,7 @@
 #
 # 필요한 설정 (GitHub 저장소 → Settings → Secrets and variables → Actions)
 #   Secrets:  VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID   (필수)
+#             OPENAI_API_KEY                                    (선택: Claude 키가 없을 때 AI 분석)
 #             ANTHROPIC_API_KEY                                 (선택: 넣으면 AI 분석·번역)
 #   Variables: WORLDLENS_CONTACT_EMAIL 등                        (선택: 사이트 아래쪽 문의 메일)
 #
@@ -97,6 +98,10 @@ jobs:
         run: node --disable-warning=ExperimentalWarning src/refresh-cli.js
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # Claude 키가 없으면 OpenAI로 분석 (ANTHROPIC_API_KEY에 OpenAI 키를 넣어도 알아서 옮김)
+          # AI 분석 양: 한 번 갱신에 6건, 하루 300건까지 (모든 뉴스에 가설이 붙게, 중요한 사건부터)
+          WORLDLENS_MAX_AI_EVENTS: '6'
+          WORLDLENS_MAX_AI_PER_DAY: '300'
           WORLDLENS_CONTACT_EMAIL: ${{ vars.WORLDLENS_CONTACT_EMAIL }}
           WORLDLENS_BUSINESS_NAME: ${{ vars.WORLDLENS_BUSINESS_NAME }}
           WORLDLENS_BUSINESS_OWNER: ${{ vars.WORLDLENS_BUSINESS_OWNER }}

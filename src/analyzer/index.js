@@ -8,8 +8,10 @@ import {
 import { LANGS, BASE_LANG } from '../sources.js';
 import { translateJson, translationEnabled } from '../translator.js';
 
-export const MODE = process.env.ANTHROPIC_API_KEY ? 'ai' : 'demo';
-const claude = MODE === 'ai' ? await import('./claude.js') : null;
+// AI 제공자: Claude 키가 있으면 Claude, 없고 OpenAI 키가 있으면 OpenAI, 둘 다 없으면 데모
+export const PROVIDER = process.env.ANTHROPIC_API_KEY ? 'claude' : process.env.OPENAI_API_KEY ? 'openai' : null;
+export const MODE = PROVIDER ? 'ai' : 'demo';
+const claude = PROVIDER ? await import(PROVIDER === 'claude' ? './claude.js' : './openai.js') : null;
 
 // AI 비용 안전장치 (5분마다 갱신하므로 꼭 필요)
 const MAX_AI_EVENTS = Number(process.env.WORLDLENS_MAX_AI_EVENTS || 4);          // 한 번 갱신에 AI로 분석할 최대 사건 수
@@ -28,7 +30,7 @@ const OTHER_LANGS = LANGS.filter((l) => l !== BASE_LANG);
 const KEEP = new Set(['sources', 'source_id', 'kind', 'confidence', 'stance', 'applicable', 'event_id']);
 
 export function modeInfo() {
-  return { mode: MODE, model: claude?.MODEL ?? null };
+  return { mode: MODE, provider: PROVIDER, model: claude?.MODEL ?? null };
 }
 
 // 홈에 보이는 사건이 200개를 넘으면서 뒤쪽 사건이 분석되지 않던 문제 → 500개까지 (AI 분석은 따로 한 번에 몇 건으로 제한됨)
@@ -47,8 +49,10 @@ function needsAnalysis(e) {
 
 // 1) 기준 언어 분석 (처음 보는 사건을 먼저, 그다음 보도가 많이 늘어난 사건)
 export async function analyzePending() {
+  // 순서: 분석이 아예 없는 사건 → AI 분석이 아직 없는 사건 → 나머지, 같은 묶음 안에서는 보도한 나라가 많은 순 (중요한 뉴스부터)
+  const rank = (e) => (!e.analysis_mode ? 0 : e.analysis_mode !== MODE ? 1 : 2);
   const events = recentEvents().filter(needsAnalysis)
-    .sort((a, b) => (a.analysis_mode ? 1 : 0) - (b.analysis_mode ? 1 : 0));
+    .sort((a, b) => rank(a) - rank(b) || b.country_count - a.country_count);
   let targets = events;
   if (MODE === 'ai') {
     const left = Math.max(0, MAX_AI_PER_DAY - aiCountToday());
@@ -72,7 +76,8 @@ export async function analyzePending() {
     }
   }
   // 데모 분석은 비용이 없으니 기준 언어도 매번 새로 (분석 뒤에 들어온 기사 번역을 바로 반영)
-  if (MODE !== 'ai') {
+  // AI 모드에서도 아직 AI가 손대지 못한 사건(데모 분석)은 계속 새로 고침
+  {
     const fresh = new Set(targets.map((e) => e.id));
     for (const e of recentEvents()) {
       if (fresh.has(e.id) || getAnalysis(e.id, BASE_LANG)?.mode !== 'demo') continue;
