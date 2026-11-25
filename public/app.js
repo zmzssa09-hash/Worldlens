@@ -536,20 +536,17 @@ function viewsHtml(a) {
   return `${a.differences ? `<div class="callout"><h3>${esc(T.diff_title)}</h3><p>${esc(a.differences)}</p></div>` : ''}
     <section class="stance-wrap">${stanceHead(a)}${stanceGroups(a.perspectives, (g) => `<div class="persp">${g.map(card).join('')}</div>`)}</section>`;
 }
-// 가설: 사건에 얽힌 주체(나라·정부·단체·인물)별 '이런 의도였을 수 있다' + 근거 + 다른 시각
-// 맨 위에 종합 요약. 데모 분석(규칙)으로는 의도를 짐작할 수 없어서 AI 분석이 끝난 사건에만 나옴
+// 가설: 나라별로 이 사건이 어떤 의미로 읽히는지 (그 나라 언론 보도가 근거) + 맨 위 종합
+// 데모 분석(규칙)으로는 만들 수 없어서 AI 분석이 끝난 사건에만 나옴
 function hypoHtml(a) {
-  const hs = (a.hypotheses || []).filter((h) => h.actor && h.claim);
+  const hs = (a.hypotheses || []).filter((h) => h.country && h.claim);
   if (!hs.length) return `<p class="hypo-note">${esc(T.hy_need_ai)}</p>`;
-  const lv = { 낮음: 1, 중간: 2, 높음: 3 };
-  const conf = (c) => `<span class="conf">${esc(T.conf_label)} ${esc(T.conf[c] || c)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[c] || 1) ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<p class="hypo-note">${esc(T.hypo_note)}</p>
     ${a.hypothesis_summary ? `<div class="callout"><h3>${esc(T.hy_summary)}</h3><p>${esc(a.hypothesis_summary)}</p></div>` : ''}
     <div class="hypos">${hs.map((h) => `<article class="hypo">
-      <header><span class="hy-who"><b>${esc(h.actor)}</b>${h.angle ? `<span class="pill">${esc(h.angle)}</span>` : ''}</span>${conf(h.confidence)}</header>
+      <header><span class="hy-who"><b>${esc(T.hy_view(h.country))}</b>${h.angle ? `<span class="pill">${esc(h.angle)}</span>` : ''}</span></header>
       <p class="claim">${esc(h.claim)}</p>
       ${h.basis ? `<p class="basis">${esc(T.basis)} · ${esc(h.basis)}</p>` : ''}
-      ${h.counter ? `<p class="hy-counter">${esc(T.hy_counter)} · ${esc(h.counter)}</p>` : ''}
       ${h.sources?.length ? `<p class="basis">${h.sources.map(esc).join(', ')}</p>` : ''}</article>`).join('')}</div>`;
 }
 function timelineHtml(articles) {

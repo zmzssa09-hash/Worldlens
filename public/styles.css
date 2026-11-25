@@ -218,10 +218,9 @@ button.cd[aria-pressed="true"] i { color: inherit; opacity: .75; }
 .conf { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8125rem; color: var(--ink-2); }
 .conf i { width: 7px; height: 7px; border-radius: 50%; background: var(--line); display: inline-block; margin-left: 2px; }
 .conf i.on { background: var(--ink-2); }
-/* 가설: 주체 + 방면 / 의도 한 문장 / 근거 / 다른 시각 */
+/* 가설: 나라 시각 + 틀 / 가설 / 근거 */
 .hy-who { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .hypo .claim { font-weight: 600; line-height: 1.55; }
-.hy-counter { font-size: 0.875rem; color: var(--ink-2); margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--line); }
 
 .timeline { list-style: none; margin: 0; padding: 0; position: relative; }
 .timeline .day { font-weight: 700; font-size: 0.875rem; color: var(--ink-3); margin: 18px 0 8px; }
