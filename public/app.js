@@ -536,18 +536,21 @@ function viewsHtml(a) {
   return `${a.differences ? `<div class="callout"><h3>${esc(T.diff_title)}</h3><p>${esc(a.differences)}</p></div>` : ''}
     <section class="stance-wrap">${stanceHead(a)}${stanceGroups(a.perspectives, (g) => `<div class="persp">${g.map(card).join('')}</div>`)}</section>`;
 }
-// 가설: 나라별로 이 사건이 어떤 의미로 읽히는지 (그 나라 언론 보도가 근거) + 맨 위 종합
+// 가설: 숨은 이유 추리 — 맨 위 추리 결론, 가설마다 이름·그럴듯함·추리·단서·허점
 // 데모 분석(규칙)으로는 만들 수 없어서 AI 분석이 끝난 사건에만 나옴
 function hypoHtml(a) {
-  const hs = (a.hypotheses || []).filter((h) => h.country && h.claim);
+  const hs = (a.hypotheses || []).filter((h) => h.title && h.theory);
   if (!hs.length) return `<p class="hypo-note">${esc(T.hy_need_ai)}</p>`;
+  const lv = { 낮음: 1, 중간: 2, 높음: 3 };
+  const meter = (c) => `<span class="conf">${esc(T.hy_plaus)} ${esc(T.conf[c] || c)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[c] || 1) ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<p class="hypo-note">${esc(T.hypo_note)}</p>
     ${a.hypothesis_summary ? `<div class="callout"><h3>${esc(T.hy_summary)}</h3><p>${esc(a.hypothesis_summary)}</p></div>` : ''}
-    <div class="hypos">${hs.map((h) => `<article class="hypo">
-      <header><span class="hy-who"><b>${esc(T.hy_view(h.country))}</b>${h.angle ? `<span class="pill">${esc(h.angle)}</span>` : ''}</span></header>
-      <p class="claim">${esc(h.claim)}</p>
-      ${h.basis ? `<p class="basis">${esc(T.basis)} · ${esc(h.basis)}</p>` : ''}
-      ${h.sources?.length ? `<p class="basis">${h.sources.map(esc).join(', ')}</p>` : ''}</article>`).join('')}</div>`;
+    <div class="hypos">${hs.map((h, n) => `<article class="hypo">
+      <header><span class="kind">${esc(T.hy_label(n + 1))}</span>${meter(h.plausibility)}</header>
+      <h3 class="hy-title">${esc(h.title)}</h3>
+      <p>${esc(h.theory)}</p>
+      ${h.clues?.length ? `<div class="hy-clues"><b>${esc(T.hy_clues)}</b><ul>${h.clues.map((c) => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
+      ${h.counter ? `<p class="hy-counter"><b>${esc(T.hy_counter)}</b> ${esc(h.counter)}</p>` : ''}</article>`).join('')}</div>`;
 }
 function timelineHtml(articles) {
   let lastDay = '';
