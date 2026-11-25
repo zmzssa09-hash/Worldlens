@@ -60,7 +60,7 @@ export async function analyzePending() {
     targets = events.slice(0, Math.min(MAX_AI_EVENTS, left));
   }
   let done = 0, failed = 0;
-  for (const e of targets) {
+  const one = async (e) => {
     try {
       const analysis = MODE === 'ai'
         ? await claude.analyzeEvent(e, articlesForEvent(e.id))
@@ -74,7 +74,10 @@ export async function analyzePending() {
       console.warn(`[분석 실패] 사건 ${e.id}: ${err.message}`);
       if (MODE === 'ai') noteAiError('analyze', err);
     }
-  }
+  };
+  // AI 분석은 몇 건씩 동시에 (한 건에 수십 초 걸려서, 하나씩 하면 20분 간격 안에 다 못 끝냄)
+  const PARALLEL = MODE === 'ai' ? Number(process.env.WORLDLENS_AI_PARALLEL || 3) : 1;
+  for (let i = 0; i < targets.length; i += PARALLEL) await Promise.all(targets.slice(i, i + PARALLEL).map(one));
   // 데모 분석은 비용이 없으니 기준 언어도 매번 새로 (분석 뒤에 들어온 기사 번역을 바로 반영)
   // AI 모드에서도 아직 AI가 손대지 못한 사건(데모 분석)은 계속 새로 고침
   {

@@ -99,9 +99,12 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # Claude 키가 없으면 OpenAI로 분석 (ANTHROPIC_API_KEY에 OpenAI 키를 넣어도 알아서 옮김)
-          # AI 분석 양: 한 번 갱신에 6건, 하루 300건까지 (모든 뉴스에 가설이 붙게, 중요한 사건부터)
-          WORLDLENS_MAX_AI_EVENTS: '6'
-          WORLDLENS_MAX_AI_PER_DAY: '300'
+          # AI 분석 양: 새로 나오는 뉴스까지 전부 따라가게 (새 사건 하루 약 110~150개 + 기사가 늘어난 사건 다시 분석)
+          #   한 번 갱신에 12건(3건씩 동시에), 하루 800건까지. 같은 사건은 3시간 지나야 다시 분석 → 새 뉴스가 먼저
+          WORLDLENS_MAX_AI_EVENTS: '12'
+          WORLDLENS_MAX_AI_PER_DAY: '800'
+          WORLDLENS_AI_PARALLEL: '3'
+          WORLDLENS_REANALYZE_MINUTES: '180'
           WORLDLENS_CONTACT_EMAIL: ${{ vars.WORLDLENS_CONTACT_EMAIL }}
           WORLDLENS_BUSINESS_NAME: ${{ vars.WORLDLENS_BUSINESS_NAME }}
           WORLDLENS_BUSINESS_OWNER: ${{ vars.WORLDLENS_BUSINESS_OWNER }}
