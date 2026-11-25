@@ -418,7 +418,7 @@ async function renderEvent() {
     <div class="panel" data-panel="story">${storyHtml(a.story)}</div>
     <div class="panel" data-panel="facts">${factsHtml(a.facts)}</div>
     <div class="panel" data-panel="views">${viewsHtml(a)}</div>
-    <div class="panel" data-panel="hypo">${hypoHtml(a.hypotheses)}</div>
+    <div class="panel" data-panel="hypo">${hypoHtml(a)}</div>
     <div class="panel" data-panel="timeline">${timelineHtml(e.articles)}</div>`;
 
   // 따라가는 사건이면: 이번에 본 기사 수를 기억 → 홈의 '새 보도 N건'이 사라짐
@@ -536,24 +536,21 @@ function viewsHtml(a) {
   return `${a.differences ? `<div class="callout"><h3>${esc(T.diff_title)}</h3><p>${esc(a.differences)}</p></div>` : ''}
     <section class="stance-wrap">${stanceHead(a)}${stanceGroups(a.perspectives, (g) => `<div class="persp">${g.map(card).join('')}</div>`)}</section>`;
 }
-function hypoHtml(hs) {
-  if (!hs?.length) return notYet();
+// 가설: 사건에 얽힌 주체(나라·정부·단체·인물)별 '이런 의도였을 수 있다' + 근거 + 다른 시각
+// 맨 위에 종합 요약. 데모 분석(규칙)으로는 의도를 짐작할 수 없어서 AI 분석이 끝난 사건에만 나옴
+function hypoHtml(a) {
+  const hs = (a.hypotheses || []).filter((h) => h.actor && h.claim);
+  if (!hs.length) return `<p class="hypo-note">${esc(T.hy_need_ai)}</p>`;
   const lv = { 낮음: 1, 중간: 2, 높음: 3 };
   const conf = (c) => `<span class="conf">${esc(T.conf_label)} ${esc(T.conf[c] || c)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[c] || 1) ? 'on' : ''}"></i>`).join('')}</span>`;
-  // 새 구조: 가설 한 문장 + 기·승·전·결
-  if (hs[0]?.claim) {
-    const steps = [['setup', 0], ['develop', 1], ['turn', 2], ['conclusion', 3]];
-    return `<p class="hypo-note">${esc(T.hypo_note)}</p>
-    <div class="hypos">${hs.map((h, n) => `<article class="hypo story-hypo">
-      <header><span class="kind">${esc(T.hy_label(n + 1))}</span>${conf(h.confidence)}</header>
-      <h3 class="claim">${esc(h.claim)}</h3>
-      <ol class="hy-steps">${steps.filter(([k]) => h[k]).map(([k, i]) => `<li class="hy-${k}"><b>${esc(T.hy_steps[i])}</b><p>${esc(h[k])}</p></li>`).join('')}</ol>
-      ${h.sources?.length ? `<p class="basis">${esc(T.basis)} · ${h.sources.map(esc).join(', ')}</p>` : ''}</article>`).join('')}</div>`;
-  }
   return `<p class="hypo-note">${esc(T.hypo_note)}</p>
-    <div class="hypos">${hs.map((h) => `<div class="hypo"><header><span class="kind">${esc(T.kind[h.kind] || h.kind)}</span>
-      <span class="conf">${esc(T.conf_label)} ${esc(T.conf[h.confidence] || h.confidence)} ${[1, 2, 3].map((i) => `<i class="${i <= (lv[h.confidence] || 1) ? 'on' : ''}"></i>`).join('')}</span></header>
-      <p>${esc(h.text)}</p>${h.basis && h.basis !== '—' ? `<p class="basis">${esc(T.basis)} · ${esc(h.basis)}</p>` : ''}</div>`).join('')}</div>`;
+    ${a.hypothesis_summary ? `<div class="callout"><h3>${esc(T.hy_summary)}</h3><p>${esc(a.hypothesis_summary)}</p></div>` : ''}
+    <div class="hypos">${hs.map((h) => `<article class="hypo">
+      <header><span class="hy-who"><b>${esc(h.actor)}</b>${h.angle ? `<span class="pill">${esc(h.angle)}</span>` : ''}</span>${conf(h.confidence)}</header>
+      <p class="claim">${esc(h.claim)}</p>
+      ${h.basis ? `<p class="basis">${esc(T.basis)} · ${esc(h.basis)}</p>` : ''}
+      ${h.counter ? `<p class="hy-counter">${esc(T.hy_counter)} · ${esc(h.counter)}</p>` : ''}
+      ${h.sources?.length ? `<p class="basis">${h.sources.map(esc).join(', ')}</p>` : ''}</article>`).join('')}</div>`;
 }
 function timelineHtml(articles) {
   let lastDay = '';
