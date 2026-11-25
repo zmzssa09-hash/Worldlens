@@ -2,7 +2,7 @@
 // - API 키가 있으면: Claude Haiku로 번역 (안정적, 매우 저렴)
 // - 키가 없으면: 무료 Google 번역 주소를 천천히 사용. 공식 API가 아니라 요청이 많으면 한동안 막힘(429)
 //   → 한 번에 조금씩만 번역하고, 막히면 멈췄다가 다음 갱신(매시간) 때 이어서
-import { db, saveArticleTranslation } from './db.js';
+import { db, saveArticleTranslation, noteAiError } from './db.js';
 import { cleanSummary } from './textclean.js';
 
 const USE_CLAUDE = !!process.env.ANTHROPIC_API_KEY;
@@ -138,7 +138,7 @@ export async function translateArticles(lang) {
       try {
         const res = await translateTexts(part.flatMap((r) => [r.title, shortSummary(r.summary)]), lang);
         part.forEach((r, k) => { if (res[k * 2]) { saveArticleTranslation(r.id, lang, res[k * 2], shortSummary(r.summary) ? res[k * 2 + 1] : ''); translated++; } });
-      } catch (e) { console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`); break; }
+      } catch (e) { console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`); if (process.env.ANTHROPIC_API_KEY) noteAiError(`translate:${lang}`, e); break; }
     }
     return { lang, translated, remaining: count() };
   }
@@ -167,7 +167,10 @@ export async function translateArticles(lang) {
     }
   } catch (e) {
     // 이번 갱신의 요청 한도를 다 쓴 것은 정상. 막혀서 쉬는 중이면 같은 경고를 반복하지 않음
-    if (!e.message.startsWith(BUDGET_MSG) && !e.message.startsWith('무료 번역이 잠시')) console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`);
+    if (!e.message.startsWith(BUDGET_MSG) && !e.message.startsWith('무료 번역이 잠시')) {
+      console.warn(`[번역 실패:${lang}] ${e.message} — 남은 기사는 다음에 다시 시도해요`);
+      if (process.env.ANTHROPIC_API_KEY) noteAiError(`translate:${lang}`, e);
+    }
   } finally {
     requestBudget = Infinity;
   }

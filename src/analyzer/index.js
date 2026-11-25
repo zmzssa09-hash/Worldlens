@@ -3,7 +3,7 @@
 // 2) 나머지 언어로 현지화: AI 분석은 자동 번역(비용 추가 없음), 데모는 언어별 문장 틀로 다시 생성
 import * as demo from './demo.js';
 import {
-  db, listEvents, articlesForEvent, articleTitle, getAnalysis, saveAnalysis, markAnalyzed, saveBriefing,
+  db, listEvents, articlesForEvent, articleTitle, getAnalysis, saveAnalysis, markAnalyzed, saveBriefing, noteAiError,
 } from '../db.js';
 import { LANGS, BASE_LANG } from '../sources.js';
 import { translateJson, translationEnabled } from '../translator.js';
@@ -68,6 +68,7 @@ export async function analyzePending() {
     } catch (err) {
       failed++;
       console.warn(`[분석 실패] 사건 ${e.id}: ${err.message}`);
+      if (MODE === 'ai') noteAiError('analyze', err);
     }
   }
   // 데모 분석은 비용이 없으니 기준 언어도 매번 새로 (분석 뒤에 들어온 기사 번역을 바로 반영)

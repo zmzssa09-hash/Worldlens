@@ -110,6 +110,7 @@ export function statusData() {
     sources_failed: report?.failed ?? [],
     translator: process.env.ANTHROPIC_API_KEY ? 'claude' : 'free',
     translation_pending: parse(getMeta('translation_pending'), {}),
+    ai_error: parse(getMeta('last_ai_error'), null),
     site: SITE_INFO,
   };
 }

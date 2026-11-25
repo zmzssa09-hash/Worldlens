@@ -217,3 +217,10 @@ export function pruneOld(keepDays = 21) {
     throw err;
   }
 }
+
+// AI(Claude) 호출이 실패한 마지막 이유를 남김 → status.json에 보여서 로그 없이도 원인을 알 수 있게
+// (키가 메시지에 섞여도 지움. 이유만 남기고 키는 절대 남기지 않음)
+export function noteAiError(where, err) {
+  const msg = String(err?.message || err).replace(/sk-ant-[\w-]+/g, '[키]').slice(0, 300);
+  setMeta('last_ai_error', JSON.stringify({ at: new Date().toISOString(), where, status: err?.status ?? null, msg }));
+}
