@@ -6,6 +6,7 @@ import { guessCategory } from './category.js';
 import { cleanSummary } from './textclean.js';
 import { guessImpact } from './analyzer/impact.js';
 import { MANUAL_HYPOTHESES } from './manual-hypotheses.js';
+import { MANUAL_HYPOTHESES_KO } from './manual-hypotheses-ko.js';
 
 // ── 중요도 ──
 // 보도한 나라 수는 화제성일 뿐이라, 영어권 매체가 함께 받는 연예·개인 사건이 쉽게 15개국을 넘었음
@@ -210,9 +211,10 @@ export function eventsData(lang, events = shownEvents()) {
 
 // AI 분석에 가설이 없으면 직접 써 넣은 '숨은 이유 추리'로 채움 (manual-hypotheses.js)
 function withManualHypotheses(id, analysis, lang) {
-  const m = MANUAL_HYPOTHESES[id];
+  const m = MANUAL_HYPOTHESES[id] || MANUAL_HYPOTHESES_KO[id];
   if (!m || !analysis || (analysis.hypotheses || []).some((h) => h.title && h.theory)) return analysis;
-  const l = m[lang] || m.en;
+  const l = m[lang]; // 그 언어로 써 둔 게 없으면 넣지 않음 (한국어만 쓴 사건)
+  if (!l) return analysis;
   return { ...analysis, hypotheses: l.hypotheses, hypothesis_summary: l.summary };
 }
 
